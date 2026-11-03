@@ -1,0 +1,250 @@
+{
+  "created_at_utc": "2026-11-03T19:01:56.388861+00:00",
+  "source_snapshot": "2026-06-15",
+  "input_path": "data/raw/mexico_city_2026-06-15_listings.csv.gz",
+  "output_path": "data/processed/development_clean.csv",
+  "uses_test_snapshot": false,
+  "operations": [
+    {
+      "step": "read_june",
+      "rows_in": 31430,
+      "rows_out": 31430
+    },
+    {
+      "step": "parse_price_to_price_mxn",
+      "rows_in": 31430,
+      "rows_out": 31430
+    },
+    {
+      "step": "filter_modeling_target",
+      "rows_in": 31430,
+      "rows_out": 29637,
+      "rows_removed_invalid_id": 0,
+      "rows_removed_invalid_price": 1793,
+      "price_status_counts": {
+        "missing": 1793,
+        "invalid": 0,
+        "zero_or_negative": 0,
+        "valid": 29637
+      }
+    },
+    {
+      "step": "impute_numeric_features",
+      "rows_in": 29637,
+      "rows_out": 29637
+    },
+    {
+      "step": "fill_and_group_categories",
+      "rows_in": 29637,
+      "rows_out": 29637
+    }
+  ],
+  "rows": {
+    "input": 31430,
+    "after_valid_id_and_price": 29637,
+    "output": 29637,
+    "rows_removed_total": 1793
+  },
+  "price_status_counts": {
+    "missing": 1793,
+    "invalid": 0,
+    "zero_or_negative": 0,
+    "valid": 29637
+  },
+  "price_diagnostics_development_only": {
+    "min": 18.76,
+    "max": 1141520.0,
+    "p01": 337.79,
+    "q1": 1073.0,
+    "median": 1756.0,
+    "q3": 2853.0,
+    "p99": 20292.425999999978,
+    "iqr_lower": 0.0,
+    "iqr_upper": 5523.0,
+    "below_iqr_lower_count": 0,
+    "above_iqr_upper_count": 2461,
+    "outside_p01_p99_count": 593,
+    "extremes_removed": 0,
+    "extreme_rule": "No se eliminan extremos en Fase 2; se reportan flags IQR y p01/p99 calculados solo en junio.",
+    "future_sensitivity_plan": {
+      "primary": "Conservar todos los precios válidos y evaluar el candidato log(precio).",
+      "alternative": "Comparar, sin borrar observaciones por defecto, una especificación robusta o un tope p99 calculado dentro de cada fold de entrenamiento.",
+      "validation_target": "Calcular métricas sobre el precio original de la partición de validación, no sobre un objetivo recortado.",
+      "test_prohibited": true
+    }
+  },
+  "fit_scope": "Estadísticas ajustadas sobre todo junio; artefacto para EDA y desarrollo final, no para validación interna posterior.",
+  "future_validation_protocol": {
+    "split_before_fit": true,
+    "fit_imputation_on_training_fold_only": true,
+    "fit_rare_category_rules_on_training_fold_only": true,
+    "fit_scaling_on_training_fold_only": true,
+    "fit_outlier_thresholds_on_training_fold_only": true,
+    "apply_fitted_rules_to_validation_fold": true,
+    "never_use_reserved_test": true
+  },
+  "numeric_imputation": {
+    "latitude": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 0,
+      "fill_value": 19.4146743,
+      "fallback": null
+    },
+    "longitude": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 0,
+      "fill_value": -99.16556485952454,
+      "fallback": null
+    },
+    "accommodates": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 0,
+      "fill_value": 3.0,
+      "fallback": null
+    },
+    "bathrooms": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 2107,
+      "fill_value": 1.0,
+      "fallback": null
+    },
+    "bedrooms": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 4896,
+      "fill_value": 1.0,
+      "fallback": null
+    },
+    "beds": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 884,
+      "fill_value": 2.0,
+      "fallback": null
+    },
+    "minimum_nights": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 11,
+      "fill_value": 1.0,
+      "fallback": null
+    },
+    "maximum_nights": {
+      "type": "median_from_june_valid_price_rows",
+      "missing_before": 11,
+      "fill_value": 365.0,
+      "fallback": null
+    },
+    "amenities_count": {
+      "type": "count_items_in_amenities_string",
+      "missing_treated_as": 0,
+      "fill_value": null
+    }
+  },
+  "categorical_rules": {
+    "neighbourhood_cleansed": {
+      "missing_after_fill": 0,
+      "min_category_count": 20,
+      "rare_category_count": 0,
+      "rare_categories": [],
+      "rare_categories_replaced_with": "Other"
+    },
+    "property_type": {
+      "missing_after_fill": 0,
+      "min_category_count": 20,
+      "rare_category_count": 47,
+      "rare_categories": [
+        "Private room in cabin",
+        "Entire place",
+        "Entire cottage",
+        "Shared room in bed and breakfast",
+        "Holiday park",
+        "Shared room in casa particular",
+        "Entire villa",
+        "Private room in hut",
+        "Camper/RV",
+        "Hut",
+        "Private room in villa",
+        "Room in bed and breakfast",
+        "Shared room in condo",
+        "Private room in dome",
+        "Tent",
+        "Private room in nature lodge",
+        "Dome",
+        "Shared room in townhouse",
+        "Shared room in boutique hotel",
+        "Private room in tower",
+        "Tower",
+        "Private room in yurt",
+        "Entire home/apt",
+        "Private room in tent",
+        "Private room in earthen home",
+        "Entire chalet",
+        "Private room in shipping container",
+        "Cave",
+        "Campsite",
+        "Room in casa particular",
+        "Private room in castle",
+        "Entire hostel",
+        "Castle",
+        "Private room in lighthouse",
+        "Private room in cottage",
+        "Private room in minsu",
+        "Private room in barn",
+        "Private room in resort",
+        "Private room in farm stay",
+        "Treehouse",
+        "Shared room in guest suite",
+        "Shared room in tiny home",
+        "Shared room in loft",
+        "Shared room in barn",
+        "Room in hostel",
+        "Boat",
+        "Entire bungalow"
+      ],
+      "rare_categories_replaced_with": "Other"
+    },
+    "room_type": {
+      "missing_after_fill": 0,
+      "min_category_count": 20,
+      "rare_category_count": 0,
+      "rare_categories": [],
+      "rare_categories_replaced_with": "Other"
+    },
+    "host_has_profile_pic": {
+      "missing_after_fill": 0,
+      "min_category_count": 20,
+      "rare_category_count": 1,
+      "rare_categories": [
+        "Missing"
+      ],
+      "rare_categories_replaced_with": "Other"
+    },
+    "host_identity_verified": {
+      "missing_after_fill": 0,
+      "min_category_count": 20,
+      "rare_category_count": 1,
+      "rare_categories": [
+        "Missing"
+      ],
+      "rare_categories_replaced_with": "Other"
+    }
+  },
+  "min_category_count": 20,
+  "feature_columns": [
+    "price_mxn",
+    "latitude",
+    "longitude",
+    "accommodates",
+    "bathrooms",
+    "bedrooms",
+    "beds",
+    "minimum_nights",
+    "maximum_nights",
+    "amenities_count",
+    "neighbourhood_cleansed",
+    "property_type",
+    "room_type",
+    "host_has_profile_pic",
+    "host_identity_verified"
+  ],
+  "id_used_as_predictor": false,
+  "test_rows_saved": false
+}

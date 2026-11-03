@@ -1,0 +1,44 @@
+{
+  "created_at_utc": "2026-11-03T19:01:43.314291+00:00",
+  "development": {
+    "snapshot_date": "2026-06-15",
+    "path": "data/raw/mexico_city_2026-06-15_listings.csv.gz",
+    "definition": "Todas las filas del snapshot de junio; la limpieza de modelado conserva solo precio válido.",
+    "row_count": 31430,
+    "unique_id_count": 31430,
+    "id_null_count": 0,
+    "price_status_counts": {
+      "missing": 1793,
+      "invalid": 0,
+      "zero_or_negative": 0,
+      "valid": 29637,
+      "rows": 31430
+    }
+  },
+  "test": {
+    "snapshot_date": "2026-09-23",
+    "path": "data/raw/mexico_city_2026-09-23_listings.csv.gz",
+    "definition": "IDs presentes en septiembre y ausentes en junio.",
+    "recent_row_count": 30468,
+    "recent_id_null_count": 0,
+    "new_id_count": 2664,
+    "eligible_new_id_count": 2604,
+    "excluded_new_id_count": 60,
+    "excluded_new_by_price_status": {
+      "missing": 60,
+      "invalid": 0,
+      "zero_or_negative": 0
+    },
+    "price_validity_rule": "parseable, finito y estrictamente mayor que cero",
+    "records_saved": false,
+    "ids_saved": false
+  },
+  "isolation": {
+    "notebook_loads_test": false,
+    "test_used_for_feature_selection": false,
+    "test_used_for_cleaning_rules": false,
+    "test_used_for_hyperparameters": false,
+    "test_use_policy": "reservar para una única evaluación final",
+    "interpretation_note": "Nuevo en el snapshot significa nuevo para la observación; no necesariamente recién publicado en Airbnb."
+  }
+}
