@@ -1,0 +1,28 @@
+[
+  {
+    "source": "Inside Airbnb",
+    "source_page": "https://insideairbnb.com/get-the-data/",
+    "snapshot_date": "2026-06-15",
+    "url": "https://data.insideairbnb.com/mexico/df/mexico-city/2026-06-15/data/listings.csv.gz",
+    "downloaded_at_utc": "2026-11-03T18:32:39.938598+00:00",
+    "path": "data/raw/mexico_city_2026-06-15_listings.csv.gz",
+    "size_bytes": 18411663,
+    "sha256": "bbe24eee4a96cb41a157e8b3eed9420225ec9fb94137233d9c2f4ce6d64eebfe",
+    "content_type": "application/x-gzip",
+    "file_role": "detailed listings.csv.gz",
+    "bytes_modified": false
+  },
+  {
+    "source": "Inside Airbnb",
+    "source_page": "https://insideairbnb.com/get-the-data/",
+    "snapshot_date": "2026-09-23",
+    "url": "https://data.insideairbnb.com/mexico/df/mexico-city/2026-09-23/data/listings.csv.gz",
+    "downloaded_at_utc": "2026-11-03T18:32:40.751496+00:00",
+    "path": "data/raw/mexico_city_2026-09-23_listings.csv.gz",
+    "size_bytes": 17169955,
+    "sha256": "76cd2d8186d8e2d6b62ebe769d83322ef7a2dcf059b7eede8492ef61849c1cee",
+    "content_type": "application/x-gzip",
+    "file_role": "detailed listings.csv.gz",
+    "bytes_modified": false
+  }
+]

@@ -1,0 +1,28 @@
+[project]
+name = "data-science-airbnb-pricing"
+version = "0.1.0"
+description = "Infraestructura y auditoría reproducible para precios de Airbnb en Ciudad de México"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=2.2,<3.0",
+    "numpy>=2.0,<3.0",
+    "matplotlib>=3.9,<4.0",
+    "seaborn>=0.13,<1.0",
+    "scikit-learn>=1.5,<2.0",
+    "lightgbm>=4.5,<5.0",
+    "jupyter>=1.1,<2.0",
+    "ipykernel>=6.29,<7.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

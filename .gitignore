@@ -77,7 +77,8 @@ docs/_build/
 target/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
 
 # IPython
 profile_default/
@@ -99,7 +100,7 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
-# uv.lock
+# uv.lock is intentionally committed for reproducible environments.
 
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
@@ -207,6 +208,37 @@ tempCodeRunnerFile.py
 
 # Ruff stuff:
 .ruff_cache/
+
+# Project data and generated artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+models/*
+!models/.gitkeep
+reports/figures/*
+!reports/figures/.gitkeep
+reports/*.json
+*.pkl
+*.pickle
+*.joblib
+*.onnx
+*.bst
+*.bin
+*.model
+*.parquet
+*.feather
+*.sqlite
+*.db
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Local operating-system/editor artifacts
+.DS_Store
+.vscode/
+.idea/
 
 # PyPI configuration file
 .pypirc
