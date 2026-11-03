@@ -6,7 +6,7 @@ Pregunta: ¿qué precio por noche debe cobrar un anfitrión nuevo de Airbnb en C
 
 Integrantes: Sofía Eggenberger, Juan Pablo Madriz y Víctor Saravia.
 
-Esta entrega cubre únicamente la Fase 1: infraestructura, adquisición y auditoría inicial. No incluye EDA profundo, modelos ni resultados inventados.
+Esta entrega cubre las Fases 1 y 2: infraestructura, adquisición, auditoría inicial, preparación de datos y EDA descriptivo sobre junio. No incluye entrenamiento de modelos ni resultados inventados.
 
 ## Fuente y snapshots
 
@@ -59,9 +59,49 @@ uv run python -m src.download_data --url URL_SNAPSHOT_1 --url URL_SNAPSHOT_2
 
 La auditoría verifica columnas, filas, `id`, `price`, marcadores de moneda e intersección de IDs. El [diccionario oficial de Inside Airbnb](https://docs.google.com/spreadsheets/d/1iWCNJcSutYqpULSQHlNyGInUvHg2BoUGoNRIGa6Szc4/edit?usp=sharing) documenta `price` como precio diario en moneda local y el `$` como artefacto técnico del export; para Mexico City esto sustenta reportar MXN, aunque el CSV no contiene una columna explícita `currency`.
 
-## Notebook inicial
+## Preparación y EDA de Fase 2
 
-`notebooks/01_eda.ipynb` contiene el framing, la carga inicial y reglas de disponibilidad temporal. No se ejecuta EDA profundo antes de separar el futuro test basado en anuncios que aparecen en el snapshot reciente y no estaban en el anterior.
+La separación y limpieza reproducible se ejecutan con:
+
+```bash
+uv run python -m src.preparation
+```
+
+Este comando usa junio para construir `data/processed/development_clean.csv`, `docs/cleaning_log.json`, `docs/feature_policy.md` y `docs/split_manifest.json`. El archivo procesado y los IDs del test están aislados: el manifiesto guarda conteos de elegibilidad, pero no guarda filas ni IDs de septiembre.
+
+`notebooks/01_eda.ipynb` carga únicamente el snapshot de junio, vuelve a ejecutar la preparación de desarrollo y guarda las figuras generadas en `reports/figures/`. Para reproducir el notebook completo:
+
+```bash
+uv run jupyter nbconvert \
+  --to notebook --execute --inplace \
+  --ExecutePreprocessor.timeout=600 \
+  --ExecutePreprocessor.kernel_name=python3 \
+  notebooks/01_eda.ipynb
+```
+
+La notebook documenta el problema, los costos de sobrevalorar y subvalorar, la métrica futura, el diseño temporal, la limpieza y el EDA exclusivamente de junio. No entrena modelos ni calcula métricas del test.
+
+La política de variables está en [`docs/feature_policy.md`](docs/feature_policy.md). Reseñas, ratings, disponibilidad observada, ingresos estimados, derivados del precio, identificadores y otras métricas posteriores a publicar quedan fuera. “Nuevo en el snapshot” no necesariamente significa “anuncio recién publicado”.
+
+Para reconstruir los artefactos ignorados desde un clon limpio, usar los URLs exactos ya verificados y luego ejecutar la preparación:
+
+```bash
+uv sync
+uv run python -m src.download_data \
+  --url https://data.insideairbnb.com/mexico/df/mexico-city/2026-06-15/data/listings.csv.gz \
+  --url https://data.insideairbnb.com/mexico/df/mexico-city/2026-09-23/data/listings.csv.gz
+uv run python -m src.audit_data
+uv run python -m src.preparation
+uv run jupyter nbconvert --to notebook --execute --inplace \
+  --ExecutePreprocessor.timeout=600 \
+  --ExecutePreprocessor.kernel_name=python3 notebooks/01_eda.ipynb
+```
+
+La notebook depende del snapshot de junio en `data/raw/`, que está ignorado por Git, y regenera `data/processed/development_clean.csv` y las figuras ignoradas. Los JSON y la política en `docs/` sí se conservan en Git. `docs/cleaning_log.json` registra estadísticas ajustadas sobre todo junio para EDA y desarrollo final; no se debe partir luego ese CSV para validación interna.
+
+## Regla para validación interna futura
+
+Antes de cualquier validación cruzada o partición interna de junio, se debe separar el fold y ajustar dentro del fold de entrenamiento todas las reglas que aprendan de datos: imputaciones, agrupación de categorías raras, escalado y umbrales de extremos. Después se aplican esas reglas al fold de validación. Las estadísticas descriptivas de `docs/cleaning_log.json` y de la notebook son solo EDA. El precio objetivo de validación debe conservarse en su escala original para calcular pinball loss, MAE y cobertura. El snapshot de septiembre no participa en ninguna de estas decisiones.
 
 ## Reglas de disponibilidad y fuga
 
@@ -71,14 +111,16 @@ El caso de uso es un anfitrión nuevo. No deben usarse como predictores al publi
 
 ```bash
 uv run pytest
+uv lock --check
+git diff --check
 ```
 
-Las pruebas cubren parseo numérico de `price`, extracción de enlaces detallados y auditoría de IDs/moneda en archivos pequeños temporales.
+Las pruebas cubren parseo numérico de `price`, estados de validez, separación temporal, reglas de limpieza, extracción de enlaces detallados y auditoría de IDs/moneda en archivos pequeños temporales.
 
 ## Flujo colaborativo
 
-1. Crear una rama descriptiva desde `main`, por ejemplo `feat/data-audit` o `docs/framing`.
-2. Trabajar en cambios pequeños, ejecutar `uv run pytest` y documentar comandos/resultados.
-3. Abrir un pull request hacia `main` con descripción, evidencia de auditoría y limitaciones.
+1. Crear una rama descriptiva desde `main`, por ejemplo `feat/data-preparation-eda`.
+2. Trabajar en cambios pequeños, ejecutar las pruebas y validaciones (`pytest`, `uv lock --check`, `git diff --check`) y documentar comandos/resultados.
+3. Abrir un pull request hacia `main` con descripción, evidencia de auditoría, figuras y limitaciones.
 4. Revisar al menos por otra persona del equipo; resolver comentarios antes de integrar.
 5. No subir datos crudos, modelos ni figuras generadas: el código, la documentación y `uv.lock` sí se conservan en Git.
