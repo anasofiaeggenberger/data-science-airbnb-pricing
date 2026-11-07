@@ -54,8 +54,8 @@ def _check_same_length(reference: np.ndarray, other: np.ndarray, name: str) -> N
         )
 
 
-def _as_target_array(y_true: Any) -> np.ndarray:
-    """Valida el objetivo de validación en MXN original."""
+def validate_price_target(y_true: Any) -> np.ndarray:
+    """Valida un objetivo de precio en MXN original y lo devuelve como arreglo."""
 
     array = _as_float_array(y_true, "y_true")
     if (array <= 0).any():
@@ -69,7 +69,7 @@ def pinball_loss(y_true: Any, y_pred: Any, quantile: float) -> float:
 
     if not 0.0 < quantile < 1.0:
         raise ValueError(f"El cuantil debe estar en (0, 1); se recibió {quantile}.")
-    target = _as_target_array(y_true)
+    target = validate_price_target(y_true)
     prediction = _as_float_array(y_pred, "y_pred")
     _check_same_length(target, prediction, "y_pred")
     error = target - prediction
@@ -80,7 +80,7 @@ def pinball_loss(y_true: Any, y_pred: Any, quantile: float) -> float:
 def mean_absolute_error(y_true: Any, y_pred: Any) -> float:
     """MAE en MXN."""
 
-    target = _as_target_array(y_true)
+    target = validate_price_target(y_true)
     prediction = _as_float_array(y_pred, "y_pred")
     _check_same_length(target, prediction, "y_pred")
     return float(np.mean(np.abs(target - prediction)))
@@ -89,7 +89,7 @@ def mean_absolute_error(y_true: Any, y_pred: Any) -> float:
 def interval_coverage(y_true: Any, lower: Any, upper: Any) -> float:
     """Proporción de precios reales dentro del intervalo, con extremos incluidos."""
 
-    target = _as_target_array(y_true)
+    target = validate_price_target(y_true)
     low = _as_float_array(lower, "lower")
     high = _as_float_array(upper, "upper")
     _check_same_length(target, low, "lower")
@@ -141,7 +141,7 @@ def evaluate_quantile_predictions(
 ) -> dict[str, float]:
     """Calcula todas las métricas de una partición contra el precio original en MXN."""
 
-    target = _as_target_array(y_true)
+    target = validate_price_target(y_true)
     ordered = _ordered_prediction_frame(predictions, quantile_levels)
     for column in ordered.columns:
         _check_same_length(target, _as_float_array(ordered[column], column), column)
