@@ -122,6 +122,12 @@ def cross_validate(
         fold_ids.iloc[valid] = fold
 
         results = evaluate_quantile_predictions(y_valid, fold_prediction)
+        # quantile_crossing_rate mide después de ordenar; esto mide antes, sobre la salida cruda.
+        if hasattr(model, "crossing_rate"):
+            results["crossing_rate_before_sorting"] = float(model.crossing_rate(X_valid))
+        else:
+            # Sin paso de ordenamiento, antes y después son la misma cifra.
+            results["crossing_rate_before_sorting"] = results["quantile_crossing_rate"]
         results["fold"] = float(fold)
         fold_metrics.append(results)
 
@@ -179,6 +185,7 @@ def _summary_record(name: str, result: dict[str, Any]) -> dict[str, Any]:
         "mae_median",
         "coverage",
         "mean_interval_width",
+        "crossing_rate_before_sorting",
         "quantile_crossing_rate",
         "n_observations",
     ]

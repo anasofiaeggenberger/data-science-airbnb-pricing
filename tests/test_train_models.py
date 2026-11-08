@@ -219,3 +219,28 @@ def test_a_variant_that_breaks_a_model_is_recorded_instead_of_aborting(monkeypat
     assert "rango numérico" in broken["error"]
     assert broken["mean"] is None
     assert broken["change_vs_base_pct"] is None
+
+
+def test_crossing_rate_is_reported_before_and_after_sorting() -> None:
+    X, y, metadata = synthetic_development()
+    folds = simple_folds(len(X))
+
+    lgbm_metrics, _ = cross_validate(
+        "lightgbm",
+        {"n_estimators": 40, "learning_rate": 0.1, "num_leaves": 15, "min_child_samples": 10},
+        X,
+        y,
+        metadata,
+        folds,
+    )
+    for record in lgbm_metrics:
+        # Después de ordenar nunca quedan cruces; antes es una cifra que hay que reportar aparte.
+        assert record["quantile_crossing_rate"] == pytest.approx(0.0)
+        assert 0.0 <= record["crossing_rate_before_sorting"] <= 1.0
+
+    # Un modelo sin paso de ordenamiento reporta la misma cifra en ambas claves.
+    baseline_metrics, _ = cross_validate(
+        "baseline", {"min_group_size": 10}, X, y, metadata, folds
+    )
+    for record in baseline_metrics:
+        assert record["crossing_rate_before_sorting"] == record["quantile_crossing_rate"]
