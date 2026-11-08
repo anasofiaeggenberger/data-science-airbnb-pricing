@@ -13,4 +13,21 @@ Fecha: 8 de noviembre de 2026.
 - `joblib` se declara como dependencia directa en pyproject.toml y uv.lock. La actualización mantiene las versiones ya fijadas de los paquetes.
 - git diff --check correcto. Los artefactos originales de preparación de datos permanecen intactos.
 
-Los scripts y notebook están versionados. Modelos, CSV y ZIP de entrega quedan fuera de Git y se reconstruyen con docs/reproducibility.md. El modelo final global y la evaluación del test permanecen pendientes.
+Los scripts y notebook están versionados. Modelos, CSV y ZIP de entrega quedan fuera de Git y se reconstruyen con docs/reproducibility.md.
+
+## Verificación de la integración de experimentos
+
+Fecha: 8 de noviembre de 2026. Rama `feat/lightgbm-experiments`, después de fusionar `main` con los PR #2 y #3 ya integrados.
+
+- La fusión de `origin/main` no produjo conflictos. Se conservan las correcciones posteriores de Víctor: `joblib` declarado en pyproject.toml y presente en uv.lock, `tests/test_recommend_integration.py`, el README actualizado y el etiquetado de las métricas de Ridge como provisionales.
+- 84 pruebas pasan, incluidas las de Víctor sin modificar. `uv lock --check` y `git diff --check` correctos.
+- Las métricas comparativas salen únicamente de `src/metrics.py`. Una prueba contrasta su pinball contra `sklearn.metrics.mean_pinball_loss` en los cuatro cuantiles. `src/train_ridge.py` mantiene sus cálculos locales, etiquetados como provisionales, y no se usa para comparar familias.
+- Baseline, Ridge y LightGBM se evalúan sobre las mismas cinco particiones de `make_folds()`. La corrida registró `fold_assignment_sha256` igual a `0bc17e53368075dfcc00702ad0e9b2061e04d670b93fb1004b062b7eb5a27508`, el mismo valor de docs/ridge_validation.json.
+- La comparación regenerada tras la fusión reprodujo cifras idénticas a la corrida anterior, hasta el sexto decimal. Las correcciones de Víctor no tocaron `modeling_data.py`, `preprocessing.py` ni `ridge_model.py`.
+- Selección por pinball p35; MAE y cobertura se reportan como secundarias. Hiperparámetros elegidos solo con junio: 4 alphas de Ridge y 12 configuraciones de LightGBM.
+- Cruces de cuantiles de LightGBM reportados por separado: 4.98 % antes de ordenar, 0 % después.
+- Serialización del ganador verificada sobre junio real en rutas temporales: entrenó con 29,637 filas, guardó el artefacto joblib con su metadata, y `src/recommend.py` lo cargó y devolvió los cuatro cuantiles en MXN, positivos y ordenados. También se probó con Ridge y LightGBM sobre datos sintéticos.
+- El evaluador final se probó únicamente con snapshots sintéticos en directorios temporales. **No se ejecutó la evaluación real.** No existen docs/frozen_solution.json ni docs/final_evaluation.json, y `data/raw/` contiene solo el snapshot de junio: septiembre no está descargado.
+- La solución todavía no está congelada: esa decisión es del equipo y requiere la revisión previa de la selección documentada.
+
+El test temporal de septiembre permanece sin evaluar.

@@ -81,8 +81,11 @@ class BaselineQuantileModel:
             index=X.index,
         )
 
-    def fit(self, X: pd.DataFrame, y: Any) -> "BaselineQuantileModel":
-        """Ajusta los cuantiles por grupo usando solo estas filas de entrenamiento."""
+    def fit(self, X: pd.DataFrame, y: Any, groups: Any = None) -> "BaselineQuantileModel":
+        """Ajusta los cuantiles por grupo usando solo estas filas de entrenamiento.
+
+        `groups` se acepta y se ignora, para compartir firma con Ridge y LightGBM.
+        """
 
         target = validate_price_target(y)
         labels = self._label_frame(X).reset_index(drop=True)
