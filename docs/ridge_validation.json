@@ -4,6 +4,8 @@
   "n_hosts": 13095,
   "test_evaluated": false,
   "status": "ridge_candidate_not_global_winner",
+  "metrics_status": "provisional_pending_shared_metrics",
+  "metrics_implementation": "sklearn_metrics_and_local_interval_calculations",
   "include_optional": false,
   "selected_alpha": 100.0,
   "selection_metric": "mean_fold_pinball_p35",

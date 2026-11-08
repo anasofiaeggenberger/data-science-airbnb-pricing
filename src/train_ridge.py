@@ -1,8 +1,11 @@
-"""Búsqueda pequeña de Ridge usando exclusivamente junio."""
+"""Búsqueda de Ridge en junio con métricas locales provisionales.
+
+Pendiente de sustituir los cálculos locales por evaluate_quantile_predictions
+cuando src.metrics se integre en esta rama y de regenerar la comparación común.
+"""
 import argparse
 import hashlib
 import json
-from pathlib import Path
 
 import joblib
 import numpy as np
@@ -15,7 +18,12 @@ from src.preparation import DEFAULT_JUNE_PATH, REPO_ROOT
 from src.ridge_model import RidgeQuantileModel
 
 
+METRICS_STATUS = 'provisional_pending_shared_metrics'
+METRICS_IMPLEMENTATION = 'sklearn_metrics_and_local_interval_calculations'
+
+
 def search_ridge(X, y, metadata, alphas=(0.1, 1.0, 10.0, 100.0), include_optional=False):
+    """Selecciona alpha mediante métricas provisionales, no la evaluación común."""
     folds = make_folds(metadata)
     rows = []
     predictions = {}
@@ -56,6 +64,7 @@ def main():
     identity=hashlib.sha256(assignments.to_csv(index=False).encode()).hexdigest()
     summary={'snapshot':'2026-06-15', 'n_rows':len(X), 'n_hosts':int(metadata.host_id.nunique()),
              'test_evaluated':False, 'status':'ridge_candidate_not_global_winner',
+             'metrics_status':METRICS_STATUS, 'metrics_implementation':METRICS_IMPLEMENTATION,
              'include_optional':args.include_optional, 'selected_alpha':best,
              'selection_metric':'mean_fold_pinball_p35', 'quantiles':[.1,.35,.5,.9],
              'outer_folds':5, 'inner_calibration_folds':3,
@@ -66,10 +75,11 @@ def main():
     (REPO_ROOT/'models').mkdir(exist_ok=True)
     joblib.dump({'model':model,'metadata':summary},REPO_ROOT/f'models/ridge{suffix}.joblib')
     (REPO_ROOT/f'docs/ridge_validation{suffix}.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
-    out=REPO_ROOT/'data/processed'; out.mkdir(exist_ok=True)
+    out=REPO_ROOT/'data/processed'; out.mkdir(parents=True, exist_ok=True)
     assignments.to_csv(out/'development_folds.csv',index=False)
     pd.concat([metadata,y.rename('price_mxn'),oof],axis=1).to_csv(out/f'ridge_oof{suffix}.csv',index=False)
     print(results.groupby('alpha').pinball_recommended.agg(['mean','std']).to_string())
+    print('Métricas provisionales: pendiente integrar src.metrics y regenerar la comparación común.')
     print(f'Ridge candidato: alpha={best}; septiembre no evaluado.')
 
 

@@ -12,7 +12,7 @@ Este archivo reúne el estado técnico y las tareas por componente. La documenta
 - `notebooks/03_ridge_recommender.ipynb`: explicación y resultados de desarrollo.
 - `docs/reproducibility.md`: comandos y ejemplos de integración.
 
-La búsqueda inicial seleccionó alpha=100 entre 0.1, 1, 10 y 100. Los resultados de junio están en `docs/ridge_validation.json`; no existe evaluación final de septiembre en esta rama.
+La búsqueda inicial seleccionó alpha=100 entre 0.1, 1, 10 y 100. Los resultados de junio están en `docs/ridge_validation.json`; no existe evaluación final de septiembre en esta rama. Las métricas locales de `src/train_ridge.py` están marcadas como provisionales mediante `metrics_status` hasta integrar `src.metrics`.
 
 ## Modelos de referencia, boosting y evaluación: integración pendiente
 
@@ -23,7 +23,7 @@ Tareas del agente responsable de este componente:
 1. Usar `load_development()` para obtener X, y y metadata. Reutilizar los mismos pares de índices de `make_folds(metadata)` para baseline, Ridge y LightGBM.
 2. Ajustar Ridge con `fit(X.iloc[train], y.iloc[train], groups=metadata.host_id.iloc[train])`. Obtener predicciones mediante `predict(X.iloc[valid])`. No pasar id/host_id como predictores.
 3. Implementar LightGBM para p10, p35, p50 y p90. Ajustar sus categorías o transformaciones solo con entrenamiento. Declarar explícitamente si usa variables opcionales.
-4. Implementar el ejecutor común en `src/train_models.py`. Evaluar en MXN mediante `evaluate_quantile_predictions`, guardar métricas por fold y predicciones fuera de muestra. Seleccionar mediante pinball de p35.
+4. Implementar el ejecutor común en `src/train_models.py`. Evaluar en MXN mediante `evaluate_quantile_predictions`, guardar métricas por fold y predicciones fuera de muestra. Seleccionar mediante pinball de p35. Sustituir también los cálculos locales de `src/train_ridge.py` por las métricas comunes, regenerar los resultados de junio y actualizar `metrics_status` y `metrics_implementation` solo después de verificar esa integración.
 5. Ejecutar las sensibilidades de variables opcionales y extremos solamente en junio. Los objetivos de validación deben permanecer en su escala original, sin recortes.
 6. Comparar las familias de modelos, documentar la selección y congelar configuración, transformaciones y reglas antes de acceder al test.
 7. Implementar `src/evaluate_final.py` y comprobar su funcionamiento con datos sintéticos. Una vez congelada la solución, realizar una única evaluación del test temporal y guardar sus resultados generales y por segmentos.
