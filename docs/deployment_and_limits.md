@@ -6,19 +6,19 @@ El proyecto busca apoyar la definición de un precio diario en MXN para un anunc
 
 La recomendación debe entenderse como apoyo para tomar una decisión, no como una tasación ni como una promesa de resultado comercial. El precio final también requiere criterio humano y conocimiento de la propiedad, la zona, la temporada y las condiciones del mercado.
 
-El estado revisado del repositorio cubre la infraestructura de datos, la adquisición, la auditoría, la preparación y la exploración descriptiva de junio. El README describe modelos que se planean para una fase posterior, pero en esta rama todavía no hay un recomendador entrenado listo para usar.
+El estado revisado del repositorio cubre la infraestructura de datos, la adquisición, la auditoría, la preparación y la exploración descriptiva de junio. También incluye el código de Ridge, la serialización del modelo y un recomendador local por línea de comandos. El artefacto `models/ridge.joblib` se genera localmente y no se versiona. En esta rama todavía no están integradas la comparación común con LightGBM ni la evaluación final temporal.
 
-## 2. Flujo de uso previsto
+## 2. Flujo de uso implementado y previsto
 
-El flujo conceptual para una futura integración es el siguiente:
+Para el candidato Ridge, el flujo local ya está implementado. La comparación con otros modelos y la selección global siguen pendientes del PR #4.
 
-1. La persona ingresa las características disponibles antes de publicar el anuncio: ubicación, tipo de propiedad y habitación, capacidad, habitaciones, camas, baños y amenidades. La política de variables de `docs/feature_policy.md` es la referencia para decidir qué campos pueden utilizarse.
-2. El sistema valida que las entradas tengan el formato esperado, que los valores numéricos sean razonables y que no se incluyan identificadores, métricas posteriores a la publicación ni otras variables prohibidas. También debe manejar valores faltantes y categorías que no se hayan visto durante el entrenamiento.
-3. Se aplican las transformaciones aprendidas únicamente con los datos de entrenamiento: imputación, agrupación de categorías poco frecuentes, conteo de amenidades y, si corresponde al modelo, escalado. Las reglas aprendidas deben guardarse junto con el modelo y aplicarse de la misma manera al nuevo anuncio.
-4. El modelo genera una predicción en la escala de `log(precio)` o en la escala que defina su contrato. La aplicación debe convertir el resultado a MXN antes de presentarlo.
-5. La salida muestra un precio o rango sugerido, con una explicación breve de que se trata de una referencia basada en anuncios observados. Si el modelo final produce cuantiles, también muestra p10, p35, p50 y p90, siempre indicando que son estimaciones y no precios garantizados.
+1. La persona ingresa las características disponibles antes de publicar el anuncio. `src/recommend.py` exige actualmente `latitude`, `longitude`, `accommodates`, `neighbourhood_cleansed`, `property_type` y `room_type`. También puede recibir `bathrooms`, `bedrooms`, `beds`, `amenities_count`, `minimum_nights` y `maximum_nights`, que se validan si están presentes.
+2. `validate_listing` comprueba campos obligatorios, tipos de texto y rangos numéricos razonables. `id` y `host_id` no forman parte de los predictores. Las categorías no observadas no se rechazan en la codificación: el `OneHotEncoder` del preprocesador usa `handle_unknown='infrequent_if_exist'`.
+3. `prepare_features` convierte valores numéricos y categorías, calcula `amenities_count` cuando corresponde y selecciona solo las columnas permitidas. El `Pipeline` ajusta imputación, escalado, agrupación de categorías poco frecuentes y codificación dentro del entrenamiento. En validación, `src/train_ridge.py` vuelve a ajustar el pipeline dentro de cada fold.
+4. `RidgeQuantileModel` ajusta Ridge sobre `log(precio)`. Cuando recibe `host_id`, calcula residuos logarítmicos fuera de muestra mediante folds agrupados para calibrar p10, p35, p50 y p90. Después transforma las predicciones nuevamente a MXN.
+5. `src/recommend.py` carga un artefacto joblib confiable, valida que los cuatro cuantiles sean finitos, positivos y estén ordenados, y devuelve el precio p35, p10, p50 y p90 en MXN. La respuesta incluye una nota que aclara que son referencias de precios publicados y no garantías comerciales.
 
-Este flujo es un diseño previsto. En el estado actual no existe el módulo de recomendación, un artefacto de modelo ni una interfaz que ejecute todos estos pasos.
+Este flujo local está implementado para un artefacto Ridge generado con junio. No implica que LightGBM sea el modelo elegido ni que exista todavía una interfaz web o un servicio productivo.
 
 ## 3. Arquitectura conceptual de despliegue
 
@@ -40,18 +40,27 @@ Modelo de precios en la escala definida
 Conversión y presentación de resultados en MXN
 ```
 
-El repositorio actual permite ejecutar localmente la descarga, la auditoría y la preparación de los datos. No contiene una API, una interfaz web, un contenedor ni un servicio hospedado para el recomendador. Por eso, este documento describe una arquitectura conceptual y no afirma que exista un despliegue productivo.
+El repositorio permite ejecutar localmente la descarga, la auditoría, la preparación, el entrenamiento de Ridge y la inferencia del recomendador. No contiene una API, una interfaz web, un contenedor ni un servicio hospedado. Por eso, este documento describe una arquitectura conceptual y no afirma que exista un despliegue productivo.
+
+La ejecución local del candidato Ridge se documenta con:
+
+```bash
+uv run python -m src.train_ridge
+uv run python -m src.recommend --model models/ridge.joblib --listing examples/listing.json
+```
+
+El primer comando genera el artefacto ignorado por Git a partir de junio; el segundo lo carga y procesa el archivo de ejemplo. El modelo disponible por este flujo es un candidato Ridge, no necesariamente la solución final del proyecto.
 
 Una futura implementación podría empezar como una herramienta de línea de comandos o un proceso local y, después de validar el contrato y el modelo, envolverse en una API o interfaz. Esa decisión todavía no está implementada ni debe darse por hecha.
 
 ## 4. Ejecución local y reproducibilidad
 
-Para reproducir la parte actualmente disponible se requiere Python `3.12` y `uv`. Las dependencias declaradas están en `pyproject.toml` y las versiones resueltas en `uv.lock`. El README documenta, entre otros, pandas, NumPy, scikit-learn, LightGBM, matplotlib, seaborn, Jupyter, ipykernel y pytest.
+Para reproducir la parte actualmente disponible se requiere Python `3.12` y `uv`. Las dependencias declaradas están en `pyproject.toml` y las versiones resueltas en `uv.lock`. LightGBM figura como dependencia del proyecto, aunque su ejecutor y comparación todavía están pendientes del PR #4.
 
 El flujo de datos actual puede ejecutarse con:
 
 ```bash
-uv sync
+uv sync --frozen
 uv run python -m src.download_data
 uv run python -m src.audit_data
 uv run python -m src.preparation
@@ -61,7 +70,7 @@ uv lock --check
 
 La adquisición debe usar los enlaces oficiales de Inside Airbnb y conservar la URL, la fecha de snapshot y el hash registrados en los manifiestos. La preparación actual separa conceptualmente junio como desarrollo y reserva el snapshot posterior para una evaluación final; esa separación no debe romperse para ajustar transformaciones o hiperparámetros.
 
-La preparación existente genera artefactos de datos para la fase de desarrollo, pero no entrena ni carga un modelo de recomendación. Por lo tanto, los comandos anteriores no constituyen todavía una ejecución completa del recomendador.
+La preparación existente genera artefactos de datos para la fase de desarrollo. Después, `uv run python -m src.train_ridge` entrena y serializa el candidato Ridge, y `src.recommend` ejecuta la inferencia local. El artefacto y los CSV derivados se reconstruyen porque están ignorados por Git.
 
 Para que una futura ejecución sea reproducible se deben conservar, como mínimo, el snapshot exacto, su hash, la política de variables, la partición agrupada por `host_id`, la semilla, la configuración de hiperparámetros, el preprocesador y la versión del modelo. Los campos `id` y `host_id` no deben entrar como predictores.
 
@@ -69,16 +78,16 @@ Para que una futura ejecución sea reproducible se deben conservar, como mínimo
 
 La salida debe estar expresada en MXN y conservar claramente la diferencia entre una predicción y el precio que finalmente podría observarse en el mercado. Un precio recomendado sería un punto de referencia operacional obtenido a partir de las características del anuncio y del modelo elegido; no representa una garantía de demanda ni de venta.
 
-Si la integración final define los cuantiles solicitados, los cuatro serán cuantiles de la distribución estimada del precio publicado, condicionada a las características del anuncio. No son intervalos de confianza sobre la media ni probabilidades de reserva. Su interpretación sería:
+El contrato implementado para Ridge define p10, p35, p50 y p90 como cuantiles de la distribución estimada del precio publicado, condicionada a las características del anuncio. No son intervalos de confianza sobre la media ni probabilidades de reserva. Su interpretación es:
 
 - **p10:** una referencia baja dentro de la distribución estimada de precios para anuncios comparables.
-- **p35:** un punto operativo relativamente conservador que podría usarse como precio sugerido si el contrato final del equipo así lo establece.
+- **p35:** el cuantil recomendado y un punto operativo relativamente conservador para el precio sugerido.
 - **p50:** la mediana estimada; divide la distribución prevista en dos partes iguales.
 - **p90:** una referencia alta dentro de la distribución estimada.
 
-Estos cuantiles describen incertidumbre del modelo bajo los datos y supuestos utilizados. No son probabilidades de conseguir una reserva, no son límites del mercado y no garantizan que el precio publicado sea pagado. Las comisiones, impuestos, descuentos, limpieza, estancias mínimas, disponibilidad, ocupación y condiciones de cada reserva pueden cambiar el resultado real.
+Estos cuantiles describen incertidumbre del modelo bajo los datos y supuestos utilizados. El intervalo p10–p90 tiene una cobertura nominal del 80 % en el contrato de métricas, pero esa cobertura no está garantizada para cada anuncio ni para el mercado futuro. No son probabilidades de conseguir una reserva, no son límites del mercado y no garantizan que el precio publicado sea pagado. Las comisiones, impuestos, descuentos, limpieza, estancias mínimas, disponibilidad, ocupación y condiciones de cada reserva pueden cambiar el resultado real.
 
-El README propone comparar un baseline, una regresión regularizada y un modelo de cuantiles usando métricas como pinball, MAE y cobertura. En la rama revisada no hay código que produzca p10, p35, p50 o p90, ni una regla implementada que seleccione uno de ellos como precio recomendado.
+El contrato común de `src/metrics.py` define pinball, MAE y cobertura para comparar modelos. En esta rama, `src/train_ridge.py` todavía calcula las métricas de Ridge con funciones locales y las marca como provisionales; falta regenerar sus resultados con las métricas comunes. El baseline está integrado, pero la comparación común con LightGBM y la selección global siguen pendientes del PR #4.
 
 ## 6. Limitaciones de los datos de Inside Airbnb
 
@@ -135,16 +144,18 @@ También debe evitarse ingresar o utilizar información personal innecesaria, id
 - Política de variables con exclusiones explícitas, incluyendo `id`, `host_id` y variables posteriores a la publicación.
 - Manifiesto de separación temporal que reserva el snapshot posterior para una evaluación final.
 - Notebook de exploración descriptiva de junio y pruebas automatizadas para las utilidades existentes.
+- Contrato común de cuantiles y métricas en `src/metrics.py`, además del baseline por alcaldía y tipo de alojamiento.
+- Ridge sobre `log(precio)`, con búsqueda de `alpha`, `GroupKFold` por `host_id`, preprocesamiento dentro de los folds y calibración interna de residuos fuera de muestra.
+- Serialización del candidato Ridge con `joblib` y recomendador local en `src/recommend.py`, incluyendo validación de entradas y resultados p10, p35, p50 y p90 en MXN.
 - Dependencias y procedimiento de reproducción local con `uv`.
 
 ### Pendiente o no disponible en esta rama
 
-- Entrenamiento integrado del baseline, Ridge sobre `log(precio)` y modelo LightGBM de cuantiles.
-- Búsqueda reproducible de regularización y contrato común de predictores y particiones entre modelos.
-- Calibración de residuos sin utilizar una validación externa.
-- Artefacto serializado del modelo y del preprocesamiento.
-- Módulo de recomendación que cargue el artefacto, valide entradas, maneje categorías desconocidas y devuelva p10, p35, p50 y p90 en MXN.
-- Evaluación final sobre el snapshot reservado y comparación completa de modelos.
+- Conectar la búsqueda de Ridge con el contrato común de métricas y regenerar sus resultados comparables; en esta rama todavía se marcan como provisionales las métricas de `src/train_ridge.py`.
+- Integrar el ejecutor común y LightGBM del PR #4, con los mismos predictores, particiones y métricas para baseline, Ridge y LightGBM.
+- Seleccionar el modelo final y conectar el recomendador con esa selección; actualmente el flujo local carga el candidato Ridge.
+- Generar y revisar el análisis de errores y segmentos del experimento común.
+- Ejecutar una única evaluación final sobre el snapshot reservado, después de congelar la solución y sin usar ese conjunto para tomar decisiones.
 - API, interfaz web, contenedor, hospedaje y monitoreo productivo.
 
-Las funciones pendientes deben integrarse y validarse con el contrato de datos antes de describirlas como disponibles. Si alguna de ellas corresponde a otro integrante, como Juan Pablo, el recomendador no puede considerarse completo hasta que sus componentes estén incorporados, probados y conectados con el flujo común. La sección de pendientes deberá actualizarse después de incorporar el PR de Ridge y recomendador de Víctor; mientras tanto, ese trabajo no debe describirse como integrado en `main` ni en esta rama. Este documento no sustituye esa integración ni presenta funcionalidades planificadas como resultados existentes.
+Las funciones pendientes deben integrarse y validarse con el contrato de datos antes de describirlas como disponibles. Esta rama ya contiene el trabajo de Ridge y recomendador integrado en el estado revisado; todavía no presenta LightGBM como ganador ni contiene resultados de la evaluación final. Este documento no sustituye esa integración ni presenta funcionalidades planificadas como resultados existentes.
