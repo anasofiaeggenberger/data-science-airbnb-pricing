@@ -6,11 +6,11 @@ El proyecto busca apoyar la definición de un precio diario en MXN para un anunc
 
 La recomendación debe entenderse como apoyo para tomar una decisión, no como una tasación ni como una promesa de resultado comercial. El precio final también requiere criterio humano y conocimiento de la propiedad, la zona, la temporada y las condiciones del mercado.
 
-El estado revisado del repositorio incluye la infraestructura de datos, la auditoría, la preparación y la exploración descriptiva de junio. También incluye el baseline, Ridge sobre `log(precio)`, LightGBM cuantílico, el ejecutor común de modelos, el análisis por segmentos, el notebook de comparación y el recomendador local por línea de comandos. La solución ganadora todavía no está congelada oficialmente y la evaluación real del snapshot reservado de septiembre todavía no se ha ejecutado.
+El estado revisado del repositorio incluye la infraestructura de datos, la auditoría, la preparación y la exploración descriptiva de junio. También incluye el baseline, Ridge sobre `log(precio)`, LightGBM cuantílico, el ejecutor común de modelos, el análisis por segmentos, el notebook de comparación y el recomendador local por línea de comandos. La validación de junio seleccionó LightGBM, la solución quedó congelada y la evaluación temporal de septiembre se ejecutó una sola vez. Sus resultados oficiales están en `docs/final_evaluation.json` y no deben recalcularse.
 
 ## 2. Flujo de uso implementado y previsto
 
-El flujo local está preparado para consumir un artefacto serializado que contiene el modelo y su preprocesamiento. La elección del artefacto debe seguir la solución congelada cuando esta exista; mientras tanto, los resultados de desarrollo de junio sirven para comparar modelos y no constituyen una decisión final sobre el despliegue.
+El flujo local consume el artefacto serializado cuya ruta está registrada en `docs/frozen_solution.json`. La selección se hizo únicamente con junio, antes de evaluar septiembre; la evaluación temporal final sirve para medir generalización y no para reajustar el modelo.
 
 1. La persona ingresa las características disponibles antes de publicar el anuncio. `src/recommend.py` exige actualmente `latitude`, `longitude`, `accommodates`, `neighbourhood_cleansed`, `property_type` y `room_type`. También puede recibir `bathrooms`, `bedrooms`, `beds`, `amenities_count`, `minimum_nights` y `maximum_nights`, que se validan si están presentes.
 2. `validate_listing` comprueba campos obligatorios, tipos de texto y rangos numéricos razonables. `id` y `host_id` no forman parte de los predictores. Las categorías no observadas reciben el tratamiento definido por el preprocesamiento, en lugar de utilizarse como identificadores.
@@ -18,7 +18,7 @@ El flujo local está preparado para consumir un artefacto serializado que contie
 4. El baseline estima cuantiles por combinación de alcaldía y tipo de alojamiento. Ridge ajusta un modelo sobre `log(precio)` y calibra cuantiles mediante residuos fuera de muestra. LightGBM ajusta modelos cuantílicos para los niveles definidos por el contrato común. Los tres se comparan con las mismas variables, folds y métricas de desarrollo.
 5. `src/recommend.py` carga un artefacto joblib confiable, valida que los cuatro cuantiles sean finitos, positivos y estén ordenados, y devuelve el precio p35, p10, p50 y p90 en MXN. La respuesta incluye una nota que aclara que son referencias de precios publicados y no garantías comerciales.
 
-El código del recomendador puede cargar un artefacto de Ridge, baseline o LightGBM si fue serializado con el contrato esperado. La selección oficial todavía debe congelarse; por eso no se debe presentar a LightGBM como ganador definitivo ni asumir que el archivo provisional de Ridge es el artefacto final.
+El código del recomendador puede cargar un artefacto de Ridge, baseline o LightGBM si fue serializado con el contrato esperado. En la entrega final, el artefacto seleccionado corresponde a LightGBM con `n_estimators=400`, `learning_rate=0.05`, `num_leaves=31` y `min_child_samples=50`.
 
 ## 3. Arquitectura conceptual de despliegue
 
@@ -50,7 +50,7 @@ uv run python -m src.segments
 uv run python -m src.evaluate_final freeze
 ```
 
-El primer comando compara baseline, Ridge y LightGBM y guarda los resultados de desarrollo; también puede producir las predicciones de validación que consume el análisis por segmentos. El segundo genera las tablas de segmentos a partir de esas predicciones. El tercero sirve para congelar la configuración seleccionada y, salvo que se use `--skip-artifact`, entrena y serializa el artefacto correspondiente. Estos comandos describen el procedimiento reproducible; no significan que el congelamiento oficial ya se haya realizado.
+El primer comando compara baseline, Ridge y LightGBM y guarda resultados de desarrollo; también produce las predicciones de validación que consume el análisis por segmentos. El segundo genera las tablas de segmentos a partir de esas predicciones. El tercero fue el procedimiento usado para congelar la configuración seleccionada y, salvo que se use `--skip-artifact`, entrena y serializa el artefacto correspondiente. No es necesario repetirlo para preservar la evaluación final ya realizada.
 
 Después del congelamiento, el recomendador debe localizar el artefacto mediante la ruta registrada en `docs/frozen_solution.json`:
 
@@ -59,13 +59,32 @@ MODELO=$(uv run python -c "import json; print(json.load(open('docs/frozen_soluti
 uv run python -m src.recommend --model "$MODELO" --listing examples/listing.json
 ```
 
-El comando de evaluación temporal es independiente y debe reservarse para el momento autorizado:
+Si el `.joblib` original no está disponible, se puede generar una copia sin sobrescribir los JSON
+oficiales y sin volver a evaluar septiembre:
+
+```bash
+repro_dir=$(mktemp -d)
+uv run python -m src.evaluate_final freeze \
+  --comparison docs/model_comparison.json \
+  --output "$repro_dir/frozen_solution.json" \
+  --june data/raw/mexico_city_2026-06-15_listings.csv.gz \
+  --artifact "$repro_dir/final_lightgbm.joblib"
+uv run python -m src.recommend \
+  --model "$repro_dir/final_lightgbm.joblib" \
+  --listing examples/listing.json
+```
+
+La copia nueva se entrena únicamente con junio y puede tener un SHA-256 distinto por diferencias de
+entorno o serialización. `.gitignore` excluye `models/*`, `data/processed/*` y `*.joblib`, por lo
+que el artefacto original y las predicciones CSV no forman parte del commit.
+
+El comando de evaluación temporal fue independiente y se ejecutó una sola vez. No debe volver a ejecutarse:
 
 ```bash
 uv run python -m src.evaluate_final run --confirm-frozen
 ```
 
-Ese último comando no se ha ejecutado en el estado documentado aquí.
+El resultado oficial quedó guardado en `docs/final_evaluation.json`; no se debe usar `--allow-rerun`.
 
 Una futura implementación podría empezar como una herramienta de línea de comandos o un proceso local y, después de validar el contrato y el modelo, envolverse en una API o interfaz. Esa decisión todavía no está implementada ni debe darse por hecha.
 
@@ -73,24 +92,22 @@ Una futura implementación podría empezar como una herramienta de línea de com
 
 Para reproducir el proyecto se requiere Python `3.12` y `uv`. Las dependencias declaradas están en `pyproject.toml` y las versiones resueltas en `uv.lock`; `joblib` y LightGBM forman parte de las dependencias directas del proyecto. En macOS, la instalación de `libomp` puede ser necesaria para ejecutar LightGBM.
 
-El flujo de datos actual puede ejecutarse con:
+Para reproducir el desarrollo sin volver a leer ni evaluar el snapshot temporal, se puede ejecutar:
 
 ```bash
 uv sync --frozen
-uv run python -m src.download_data
-uv run python -m src.audit_data
-uv run python -m src.preparation
+uv run python -m src.fetch_development
 uv run pytest
 uv lock --check
 ```
 
-La adquisición debe usar los enlaces oficiales de Inside Airbnb y conservar la URL, la fecha de snapshot y el hash registrados en los manifiestos. La preparación actual separa conceptualmente junio como desarrollo y reserva el snapshot posterior para una evaluación final; esa separación no debe romperse para ajustar transformaciones o hiperparámetros. Los comandos anteriores describen interfaces disponibles, pero no se ejecutaron durante esta actualización.
+`src.fetch_development` verifica o descarga únicamente junio usando el manifiesto. La preparación histórica del proyecto pudo leer el snapshot reservado para construir el manifiesto temporal, pero no forma parte de la reproducción ordinaria del modelo final. No se debe ejecutar `src.evaluate_final run`, usar `--allow-rerun` ni descargar septiembre para reproducir el entrenamiento.
 
-La preparación existente genera artefactos de datos para la fase de desarrollo. Después, `uv run python -m src.train_models --mode both` genera la comparación y las predicciones de validación, y `src.recommend` ejecuta la inferencia local sobre el artefacto que corresponda a la solución congelada. El artefacto y los CSV derivados se reconstruyen porque están ignorados por Git.
+La preparación existente genera artefactos de datos para la fase de desarrollo. Después, `uv run python -m src.train_models --mode both` puede regenerar la comparación y las predicciones de validación de junio; para no sobrescribir resultados oficiales se recomienda pasar rutas temporales. `src.recommend` ejecuta la inferencia local sobre el artefacto cuya ruta está en el JSON congelado. El `.joblib` y los CSV derivados se reconstruyen porque están ignorados por Git.
 
 Para que una ejecución futura sea reproducible se deben conservar, como mínimo, el snapshot exacto, su hash, la política de variables, la partición agrupada por `host_id`, la semilla, la configuración efectiva de hiperparámetros, el preprocesador, la calibración y la versión del modelo. Los campos `id` y `host_id` no deben entrar como predictores.
 
-La suite automatizada integrada reporta 98 pruebas aprobadas en el estado informado del proyecto. Ese resultado debe volver a comprobarse en el entorno que se utilice para desplegar o regenerar los artefactos.
+La suite automatizada integrada reportó 98 pruebas aprobadas en el estado informado del proyecto. Volver a ejecutar pruebas no implica volver a ejecutar la evaluación temporal; esta última debe conservarse como el resultado oficial de una sola corrida.
 
 ## 5. Precio recomendado y cuantiles
 
@@ -113,9 +130,25 @@ El contrato común de `src/metrics.py` define pinball, MAE y cobertura para comp
 | Ridge | 706.94 | 1,722.08 | 80.2 % |
 | LightGBM | 545.12 | 1,433.27 | 74.1 % |
 
-LightGBM obtuvo el menor pinball p35 y el menor MAE p35 en la validación de junio disponible, por lo que es el mejor modelo según ese criterio de desarrollo. Su cobertura p10–p90 fue 74.1 %, inferior a la cobertura nominal del 80 %. Este resultado no convierte a LightGBM en ganador definitivo: todavía debe congelarse la solución con el procedimiento previsto y la evaluación real de septiembre debe mantenerse reservada hasta entonces.
+LightGBM obtuvo el menor pinball p35 y el menor MAE p35 en la validación de junio disponible, por lo que fue seleccionado antes de mirar septiembre. Su cobertura p10–p90 en junio fue 74.1 %, inferior a la cobertura nominal del 80 %. La solución quedó congelada con la configuración registrada en `docs/frozen_solution.json`.
 
 El contrato común también revisa el orden de los cuantiles y registra los cruces de cuantiles de LightGBM antes y después de la corrección. El análisis por bandas de precio observado es descriptivo y post hoc; no se usa para elegir variables, ajustar el modelo ni seleccionar la solución.
+
+### Evaluación temporal final
+
+La evaluación se ejecutó una sola vez sobre 2,604 anuncios con IDs ausentes en junio y precios válidos. Sus resultados oficiales son:
+
+| Métrica | Resultado |
+|---|---:|
+| Pinball p35 | 327.8444 |
+| MAE p35 | 786.0543 MXN |
+| Cobertura p10–p90 | 79.6467 % |
+| Amplitud media p10–p90 | 3,364.2481 MXN |
+| Cruce de cuantiles después del ordenamiento | 0 % |
+
+La cobertura global quedó ligeramente por debajo del 80 % nominal. También varió por segmento: las habitaciones privadas tuvieron 76.0793 % de cobertura con 857 anuncios, y Q1, el cuartil de precios más bajos, tuvo 64.6697 % con 651 anuncios. Q2 alcanzó 80.0307 %, Q3 92.3547 % y Q4 81.4815 %. El segmento de habitaciones de hotel tuvo un solo anuncio y no permite una conclusión estable.
+
+Estas diferencias son evidencia de generalización en un snapshot temporal concreto, no garantías para cada alojamiento ni para el mercado futuro. La evaluación no observa reservas, ocupación, ingresos ni rentabilidad.
 
 ## 6. Limitaciones de los datos de Inside Airbnb
 
@@ -145,9 +178,9 @@ Ante cada nueva actualización se recomienda:
 
 1. Descargar únicamente desde la fuente oficial, conservar la URL exacta, la fecha y el hash, y repetir la auditoría de columnas, identificadores, precios y faltantes.
 2. Revisar cambios de esquema, valores nuevos, categorías desconocidas y cobertura geográfica antes de volver a entrenar.
-3. Mantener separado el snapshot reservado para evaluación final. No usarlo repetidamente para elegir variables, imputaciones, umbrales, hiperparámetros o calibración.
+3. Mantener separado el snapshot evaluado y conservar `docs/final_evaluation.json` como resultado histórico de una sola ejecución. No usarlo repetidamente para elegir variables, imputaciones, umbrales, hiperparámetros o calibración.
 4. Reentrenar con `uv run python -m src.train_models --mode both` y regenerar segmentos con `uv run python -m src.segments`, usando únicamente el protocolo de desarrollo documentado. Las transformaciones deben ajustarse dentro de cada partición de entrenamiento y los folds deben ser reproducibles y estar agrupados por `host_id`.
-5. Revisar el resultado comparativo, congelar explícitamente la configuración seleccionada y conservar el artefacto junto con sus metadatos efectivos antes de cualquier evaluación temporal.
+5. Revisar el resultado comparativo, congelar explícitamente la configuración seleccionada y conservar el artefacto junto con sus metadatos efectivos. Si se regenera el `.joblib`, hacerlo fuera de los archivos oficiales y no repetir la evaluación temporal.
 6. Registrar versión de código, datos, modelo, semilla, configuración, métricas y fecha de entrenamiento.
 7. Comparar el modelo nuevo con el baseline y revisar pinball, MAE y cobertura en la escala correspondiente. También conviene revisar errores por alcaldía y tipo de alojamiento, sin convertir esos resultados en garantías de desempeño futuro.
 8. Definir una señal de alerta para deriva de datos o deterioro de errores y establecer cuándo se debe volver a auditar o entrenar.
@@ -171,20 +204,19 @@ También debe evitarse ingresar o utilizar información personal innecesaria, id
 - Auditoría básica de archivos, columnas, identificadores y precios.
 - Preparación de un conjunto de desarrollo basado en junio y documentación de limpieza.
 - Política de variables con exclusiones explícitas, incluyendo `id`, `host_id` y variables posteriores a la publicación.
-- Manifiesto de separación temporal que reserva el snapshot posterior para una evaluación final.
+- Manifiesto de separación temporal y evaluación final documentada sobre el snapshot de septiembre.
 - Notebook de exploración descriptiva de junio, notebook de comparación de modelos y pruebas automatizadas para las utilidades existentes.
 - Contrato común de cuantiles y métricas en `src/metrics.py`, baseline por alcaldía y tipo de alojamiento, Ridge sobre `log(precio)` y LightGBM cuantílico.
 - Ejecutor común que compara los tres modelos con los mismos predictores, folds agrupados por `host_id` y selección por pinball p35.
 - Búsqueda de hiperparámetros, sensibilidad y análisis por segmentos de las predicciones de validación de junio. Las bandas de precio observado se interpretan post hoc.
-- Capacidad de serialización reproducible de una solución congelada con modelo, preprocesamiento y metadatos, junto con las barreras de `src/evaluate_final.py` para separar desarrollo de evaluación temporal.
+- Solución congelada de LightGBM con modelo, preprocesamiento, metadatos, ruta y SHA-256 del artefacto, junto con las barreras de `src/evaluate_final.py` para impedir una segunda evaluación temporal.
 - Recomendador local en `src/recommend.py`, con validación de entradas y resultados p10, p35, p50 y p90 en MXN.
 - Dependencias y procedimiento de reproducción local con `uv`.
 
 ### Pendiente o no ejecutado
 
-- Congelar oficialmente la solución ganadora y conservar su artefacto final con la configuración efectiva.
-- Ejecutar la única evaluación real sobre el snapshot reservado de septiembre, después del congelamiento y con autorización explícita. Esa evaluación todavía no se ha ejecutado ni se reportan aquí resultados de septiembre.
-- Actualizar las conclusiones y el artefacto si la evaluación temporal muestra una degradación o una necesidad de recalibración; cualquier ajuste debe reiniciar el protocolo sin reutilizar septiembre para elegir el modelo.
+- No volver a ejecutar la evaluación temporal ni reajustar el modelo usando sus resultados.
+- Si se pierde el `.joblib`, regenerar una copia fuera de los archivos oficiales usando únicamente junio; el SHA-256 de una nueva serialización no tiene que coincidir con el original.
 - API, interfaz web, contenedor, hospedaje y monitoreo productivo.
 
-El mejor resultado de desarrollo disponible corresponde a LightGBM en pinball p35, pero no debe describirse como ganador definitivo hasta completar el congelamiento y la evaluación temporal reservada. Este documento distingue entre las interfaces implementadas, los procedimientos disponibles y las acciones que todavía no se han ejecutado.
+LightGBM fue seleccionado por el menor pinball p35 de junio y después se evaluó una sola vez sobre septiembre. El resultado temporal no autoriza reajustar ni volver a ejecutar el test; solo informa las limitaciones de generalización documentadas arriba.

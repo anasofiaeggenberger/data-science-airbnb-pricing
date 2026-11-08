@@ -4,7 +4,7 @@ Proyecto final de Ciencia de Datos — segundo semestre 2026, UFM.
 
 Pregunta: ¿qué precio por noche debe cobrar un anfitrión nuevo de Airbnb en Ciudad de México? El objetivo es recomendar un precio en MXN y un rango razonable usando anuncios reales de Inside Airbnb. La propuesta contempla un baseline de mediana por alcaldía y tipo de alojamiento, regresión lineal regularizada sobre `log(precio)` y LightGBM con pérdida por cuantiles. La métrica principal será pinball loss, además de MAE y cobertura del intervalo.
 
-El repositorio incluye adquisición, auditoría, preparación de datos, EDA, las métricas comunes, el baseline de cuantiles, Ridge con calibración de residuos, LightGBM cuantílico, el ejecutor que compara los tres sobre las mismas particiones, las sensibilidades acordadas y un recomendador que carga el modelo guardado. Las métricas locales de `src/train_ridge.py` siguen siendo provisionales y están etiquetadas como tales; la comparación común se calcula con `src/metrics.py`. **La evaluación final sobre septiembre no se ha ejecutado**: el snapshot queda reservado hasta congelar la solución.
+El repositorio incluye adquisición, auditoría, preparación de datos, EDA, las métricas comunes, el baseline de cuantiles, Ridge con calibración de residuos, LightGBM cuantílico, el ejecutor que compara los tres sobre las mismas particiones, las sensibilidades acordadas y un recomendador que carga el modelo guardado. Las métricas locales de `src/train_ridge.py` siguen siendo provisionales y están etiquetadas como tales; la comparación común se calcula con `src/metrics.py`. La validación de junio seleccionó LightGBM y la evaluación temporal de septiembre se ejecutó una sola vez después del congelamiento; sus resultados oficiales están en `docs/final_evaluation.json` y no deben recalcularse.
 
 ## Fuente y snapshots
 
@@ -42,14 +42,15 @@ Esto crea/usa `.venv` y respeta `uv.lock`. Si Python 3.12 no está instalado loc
 
 ## Descarga y auditoría
 
-Con conectividad a la fuente oficial:
+Para la reproducción ordinaria del desarrollo, sin volver a ejecutar la evaluación temporal:
 
 ```bash
-uv run python -m src.download_data
-uv run python -m src.audit_data
+uv run python -m src.fetch_development
 ```
 
-La descarga conserva los bytes del `listings.csv.gz` original y registra URL, snapshot, fecha UTC, tamaño y SHA-256 en `docs/data_manifest.json`. Si la página expone menos de dos enlaces detallados, el script termina con error y no inventa una segunda URL. También se pueden pasar enlaces exactos ya verificados:
+`src.fetch_development` verifica y, si hace falta, descarga únicamente el snapshot de junio registrado en `docs/data_manifest.json`. La adquisición histórica de ambos snapshots se hizo con `src.download_data`; no es necesario repetirla para reproducir el entrenamiento ni la inferencia. La auditoría sobre ambos archivos solo debe repetirse si se está revisando la procedencia, no como parte de la evaluación final.
+
+Para una adquisición controlada de snapshots concretos también existen los enlaces exactos:
 
 ```bash
 uv run python -m src.download_data --url URL_SNAPSHOT_1 --url URL_SNAPSHOT_2
@@ -59,13 +60,13 @@ La auditoría verifica columnas, filas, `id`, `price`, marcadores de moneda e in
 
 ## Preparación y EDA de Fase 2
 
-La separación y limpieza reproducible se ejecutan con:
+La preparación histórica de datos se ejecuta con:
 
 ```bash
 uv run python -m src.preparation
 ```
 
-Este comando usa junio para construir `data/processed/development_clean.csv`, `docs/cleaning_log.json`, `docs/feature_policy.md` y `docs/split_manifest.json`. El archivo procesado y los IDs del test están aislados: el manifiesto guarda conteos de elegibilidad, pero no guarda filas ni IDs de septiembre.
+Este comando usa junio para construir `data/processed/development_clean.csv`, `docs/cleaning_log.json` y `docs/feature_policy.md`, y lee el snapshot posterior únicamente para actualizar los conteos del manifiesto temporal `docs/split_manifest.json`; no guarda filas ni IDs de septiembre. Como la evaluación final ya se realizó, este comando no forma parte de la reproducción ordinaria del entrenamiento y no debe usarse para repetir la evaluación temporal.
 
 `notebooks/01_eda.ipynb` carga únicamente el snapshot de junio, vuelve a ejecutar la preparación de desarrollo y guarda las figuras generadas en `reports/figures/`. Para reproducir el notebook completo:
 
@@ -81,21 +82,19 @@ La notebook documenta el problema, los costos de sobrevalorar y subvalorar, la m
 
 La política de variables está en [`docs/feature_policy.md`](docs/feature_policy.md). Reseñas, ratings, disponibilidad observada, ingresos estimados, derivados del precio, identificadores y otras métricas posteriores a publicar quedan fuera. “Nuevo en el snapshot” no necesariamente significa “anuncio recién publicado”.
 
-Para reconstruir los artefactos ignorados desde un clon limpio, usar los URLs exactos ya verificados y luego ejecutar la preparación:
+Para reconstruir el desarrollo desde un clon limpio, verificar junio y guardar los resultados regenerables fuera del repositorio:
 
 ```bash
-uv sync
-uv run python -m src.download_data \
-  --url https://data.insideairbnb.com/mexico/df/mexico-city/2026-06-15/data/listings.csv.gz \
-  --url https://data.insideairbnb.com/mexico/df/mexico-city/2026-09-23/data/listings.csv.gz
-uv run python -m src.audit_data
-uv run python -m src.preparation
-uv run jupyter nbconvert --to notebook --execute --inplace \
-  --ExecutePreprocessor.timeout=600 \
-  --ExecutePreprocessor.kernel_name=python3 notebooks/01_eda.ipynb
+uv sync --frozen
+uv run python -m src.fetch_development
+repro_dir=$(mktemp -d)
+uv run python -m src.train_models --mode both \
+  --comparison "$repro_dir/model_comparison.json" \
+  --predictions "$repro_dir/validation_predictions.csv" \
+  --sensitivities "$repro_dir/sensitivity_results.json"
 ```
 
-La notebook depende del snapshot de junio en `data/raw/`, que está ignorado por Git, y regenera `data/processed/development_clean.csv` y las figuras ignoradas. Los JSON y la política en `docs/` sí se conservan en Git. `docs/cleaning_log.json` registra estadísticas ajustadas sobre todo junio para EDA y desarrollo final; no se debe partir luego ese CSV para validación interna.
+La comparación anterior usa únicamente junio y escribe sus resultados temporales fuera del repositorio. El notebook de EDA también trabaja únicamente con junio. No se debe agregar `--include-test`, ejecutar `src.evaluate_final run` ni usar `--allow-rerun` como parte de esta reproducción ordinaria.
 
 ## Regla para validación interna
 
@@ -135,11 +134,10 @@ La comparación entre familias sí declara un ganador, y se calcula aparte con `
 
 ## Comparación de modelos, congelamiento y evaluación final
 
-```bash
-uv run python -m src.train_models --mode both              # comparación, búsqueda y sensibilidades
-uv run python -m src.segments                              # tablas por segmento
-uv run python -m src.evaluate_final freeze                 # congelar y serializar el ganador
-```
+La comparación común, el congelamiento y la evaluación temporal ya se completaron en ese orden.
+Para regenerar resultados de desarrollo sin sobrescribir los oficiales, usar las rutas temporales
+documentadas en [reproducibilidad](docs/reproducibility.md). No volver a ejecutar la evaluación
+temporal.
 
 El congelamiento registra en `docs/frozen_solution.json` la ruta del artefacto que acaba de generar,
 junto con su SHA-256. La recomendación la lee de ahí en vez de escribirla a mano, así que el comando
@@ -159,4 +157,43 @@ Resultados y limitaciones en [resultados de desarrollo](docs/development_results
 
 **Esos números son validación de desarrollo usada para seleccionar configuración, no el test final.** Están optimistamente sesgados a favor del ganador, porque los hiperparámetros se eligieron mirando esas mismas particiones. La estimación independiente es el test temporal, una sola vez, después del congelamiento.
 
-El congelamiento guarda la configuración en `docs/frozen_solution.json`, reentrena al ganador con todo junio y serializa el artefacto en `models/`, ignorado por Git. La evaluación final exige `--confirm-frozen`, la solución congelada y que el SHA-256 de junio coincida; además se niega a repetirse si ya existe un resultado. **Septiembre no ha sido evaluado.**
+El congelamiento guardó la configuración en `docs/frozen_solution.json`, reentrenó a LightGBM con todo junio y registró el artefacto oficial `models/final_lightgbm.joblib` mediante su ruta y SHA-256. El archivo `.joblib` está excluido de Git. La evaluación final se ejecutó una sola vez con la solución congelada y quedó registrada en `docs/final_evaluation.json`; no debe volver a ejecutarse.
+
+## Resultados finales
+
+La selección se hizo exclusivamente con las cinco particiones de desarrollo de junio, antes de mirar septiembre. El modelo seleccionado fue LightGBM con `n_estimators=400`, `learning_rate=0.05`, `num_leaves=31` y `min_child_samples=50`.
+
+La evaluación temporal utilizó 2,604 anuncios con IDs ausentes en junio y precio válido:
+
+| Métrica | Resultado |
+|---|---:|
+| Pinball p35 | 327.8444 |
+| MAE p35 | 786.0543 MXN |
+| Cobertura p10–p90 | 79.6467 % |
+| Amplitud media p10–p90 | 3,364.2481 MXN |
+| Cruce de cuantiles después del ordenamiento | 0 % |
+
+La cobertura global quedó ligeramente por debajo del 80 % nominal. También hubo diferencias entre segmentos: habitaciones privadas alcanzaron 76.0793 % de cobertura con 857 anuncios, mientras que el cuartil de precios más bajos (Q1) alcanzó 64.6697 % con 651 anuncios. Q2 quedó en 80.0307 %, Q3 en 92.3547 % y Q4 en 81.4815 %. Estos resultados describen este snapshot y no garantizan el comportamiento futuro; el segmento de habitaciones de hotel tuvo solo un anuncio y no permite una conclusión confiable.
+
+El artefacto original y las predicciones CSV no están versionados: `.gitignore` excluye `models/*`, `data/processed/*` y `*.joblib`. Para usar el artefacto oficial, desde la raíz:
+
+```bash
+MODELO=$(uv run python -c "import json; print(json.load(open('docs/frozen_solution.json'))['artifact_path'])")
+uv run python -m src.recommend --model "$MODELO" --listing examples/listing.json
+```
+
+Si el `.joblib` no está disponible, se puede generar una copia nueva sin sobrescribir los JSON oficiales ni repetir septiembre:
+
+```bash
+repro_dir=$(mktemp -d)
+uv run python -m src.evaluate_final freeze \
+  --comparison docs/model_comparison.json \
+  --output "$repro_dir/frozen_solution.json" \
+  --june data/raw/mexico_city_2026-06-15_listings.csv.gz \
+  --artifact "$repro_dir/final_lightgbm.joblib"
+uv run python -m src.recommend \
+  --model "$repro_dir/final_lightgbm.joblib" \
+  --listing examples/listing.json
+```
+
+La copia nueva se entrena solo con junio y puede tener un SHA-256 distinto por diferencias de entorno o serialización. El resultado final oficial sigue siendo el registrado en `docs/final_evaluation.json`; reproducir el entrenamiento no equivale a repetir la evaluación temporal.
