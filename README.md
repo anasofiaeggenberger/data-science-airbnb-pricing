@@ -4,8 +4,6 @@ Proyecto final de Ciencia de Datos — segundo semestre 2026, UFM.
 
 Pregunta: ¿qué precio por noche debe cobrar un anfitrión nuevo de Airbnb en Ciudad de México? El objetivo es recomendar un precio en MXN y un rango razonable usando anuncios reales de Inside Airbnb. La propuesta contempla un baseline de mediana por alcaldía y tipo de alojamiento, regresión lineal regularizada sobre `log(precio)` y LightGBM con pérdida por cuantiles. La métrica principal será pinball loss, además de MAE y cobertura del intervalo.
 
-Integrantes: Sofía Eggenberger, Juan Pablo Madriz y Víctor Saravia.
-
 Esta entrega cubre las Fases 1 y 2: infraestructura, adquisición, auditoría inicial, preparación de datos y EDA descriptivo sobre junio. No incluye entrenamiento de modelos ni resultados inventados.
 
 ## Fuente y snapshots
@@ -124,3 +122,9 @@ Las pruebas cubren parseo numérico de `price`, estados de validez, separación 
 3. Abrir un pull request hacia `main` con descripción, evidencia de auditoría, figuras y limitaciones.
 4. Revisar al menos por otra persona del equipo; resolver comentarios antes de integrar.
 5. No subir datos crudos, modelos ni figuras generadas: el código, la documentación y `uv.lock` sí se conservan en Git.
+
+## Ridge y recomendador
+
+La base para modelar, las particiones por anfitrión, Ridge con calibración de residuos y el recomendador están implementados. Véanse [contrato común](docs/modeling_contract.md), [comandos reproducibles](docs/reproducibility.md) y [notebook de Ridge](notebooks/03_ridge_recommender.ipynb).
+
+La sección inicial de Fases 1 y 2 describe la entrega de datos anterior. Este avance añade validación de Ridge exclusivamente en junio. No declara un ganador entre familias ni evalúa septiembre. La comparación con baseline/LightGBM y la evaluación final del test permanecen pendientes. Los resultados de esta búsqueda están en `docs/ridge_validation.json`; la bitácora de esta sesión está en `docs/ai/modeling_log.md`.
