@@ -22,3 +22,5 @@ Predictores principales: ubicación, capacidad, baños, dormitorios, camas, cont
 - GitHub/DataScience/Proyecto2/P2_SaraviaVictor.ipynb, celdas 8, 12 y 15: Pipeline y búsqueda acotada de hiperparámetros.
 
 Se adaptan esos patrones a regresión; no se copian sus métricas de clasificación. GroupKFold, codificación de categorías nuevas y calibración de residuos son extensiones necesarias para este problema y se explican en la guía de defensa.
+- GitHub/DataScience/HDT3/HDT3.ipynb, celdas 22 y 24: regresión sobre precios, residuos y transformación logarítmica.
+- Parciales 1 y 2: referencia de estilo e interpretación de métricas; no se reutilizan los clasificadores de esos ejercicios para regresión.

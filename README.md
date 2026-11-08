@@ -124,3 +124,9 @@ Las pruebas cubren parseo numérico de `price`, estados de validez, separación 
 3. Abrir un pull request hacia `main` con descripción, evidencia de auditoría, figuras y limitaciones.
 4. Revisar al menos por otra persona del equipo; resolver comentarios antes de integrar.
 5. No subir datos crudos, modelos ni figuras generadas: el código, la documentación y `uv.lock` sí se conservan en Git.
+
+## Parte de Víctor: Ridge y recomendador
+
+La base para modelar, las particiones por anfitrión, Ridge con calibración de residuos y el recomendador están implementados. Véanse [contrato común](docs/modeling_contract.md), [comandos reproducibles e integración con Pan](docs/reproducibility.md), [guía de defensa](docs/victor_defense.md) y [notebook de Ridge](notebooks/03_ridge_victor.ipynb).
+
+La sección inicial de Fases 1 y 2 describe la entrega de datos anterior. Este avance añade validación de Ridge exclusivamente en junio. No declara un ganador entre familias ni evalúa septiembre. La comparación con baseline/LightGBM y el test final corresponden a Pan. Los resultados de esta búsqueda están en `docs/ridge_validation.json`; la bitácora de esta sesión está en `docs/ai/victor.md`.
