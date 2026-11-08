@@ -82,5 +82,5 @@ queda por debajo del 80 % nominal**: gana amplitud a costa de cubrir menos. Esa 
 interpretación debe discutir, no un detalle menor.
 
 **Estas cifras no son el resultado de desarrollo.** Son una comprobación de que el modelo corre sobre
-los folds comunes. La comparación válida, con búsqueda de hiperparámetros y sensibilidades, sale del
-ejecutor de experimentos.
+los folds comunes, con parámetros por defecto y sin búsqueda. Los resultados oficiales, con la
+búsqueda ejecutada, están en [`docs/development_results.md`](development_results.md).

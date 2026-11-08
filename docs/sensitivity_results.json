@@ -1,0 +1,180 @@
+{
+  "created_at_utc": "2026-11-08T20:46:23.277294+00:00",
+  "test_evaluated": false,
+  "selection_metric": "pinball_recommended",
+  "fold_assignment_sha256": "0bc17e53368075dfcc00702ad0e9b2061e04d670b93fb1004b062b7eb5a27508",
+  "variants": [
+    "base",
+    "optional_features_included",
+    "extreme_prices_capped_p99"
+  ],
+  "results": [
+    {
+      "variant": "base",
+      "model": "baseline",
+      "params": {
+        "min_group_size": 20
+      },
+      "include_optional": false,
+      "price_cap_quantile": null,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 648.7615815062802,
+        "mae_recommended": 1736.5024106961137,
+        "coverage": 0.7935346763945593,
+        "mean_interval_width": 3827.52012642108
+      },
+      "std_selection_metric": 102.58952132170926,
+      "change_vs_base_pct": 0.0
+    },
+    {
+      "variant": "base",
+      "model": "ridge",
+      "params": {
+        "alpha": 100.0
+      },
+      "include_optional": false,
+      "price_cap_quantile": null,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 706.9393777319362,
+        "mae_recommended": 1722.081286922657,
+        "coverage": 0.8020042717206899,
+        "mean_interval_width": 3661.318153912992
+      },
+      "std_selection_metric": 352.24328232934084,
+      "change_vs_base_pct": 0.0
+    },
+    {
+      "variant": "base",
+      "model": "lightgbm",
+      "params": {
+        "n_estimators": 400,
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "min_child_samples": 50
+      },
+      "include_optional": false,
+      "price_cap_quantile": null,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 545.1213066778662,
+        "mae_recommended": 1433.271342951271,
+        "coverage": 0.7407633859277986,
+        "mean_interval_width": 3119.1254529094317
+      },
+      "std_selection_metric": 91.53836562478385,
+      "change_vs_base_pct": 0.0
+    },
+    {
+      "variant": "optional_features_included",
+      "model": "baseline",
+      "params": {
+        "min_group_size": 20
+      },
+      "include_optional": true,
+      "price_cap_quantile": null,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 648.7615815062802,
+        "mae_recommended": 1736.5024106961137,
+        "coverage": 0.7935346763945593,
+        "mean_interval_width": 3827.52012642108
+      },
+      "std_selection_metric": 102.58952132170926,
+      "change_vs_base_pct": 0.0
+    },
+    {
+      "variant": "optional_features_included",
+      "model": "ridge",
+      "params": {
+        "alpha": 100.0
+      },
+      "include_optional": true,
+      "price_cap_quantile": null,
+      "status": "failed",
+      "error": "Predicción fuera del rango numérico; revisar las entradas.",
+      "mean": null,
+      "change_vs_base_pct": null
+    },
+    {
+      "variant": "optional_features_included",
+      "model": "lightgbm",
+      "params": {
+        "n_estimators": 400,
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "min_child_samples": 50
+      },
+      "include_optional": true,
+      "price_cap_quantile": null,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 542.3188680989197,
+        "mae_recommended": 1427.1761477819794,
+        "coverage": 0.7343525489041548,
+        "mean_interval_width": 3071.211734495432
+      },
+      "std_selection_metric": 92.31734606069293,
+      "change_vs_base_pct": -0.5140944858724072
+    },
+    {
+      "variant": "extreme_prices_capped_p99",
+      "model": "baseline",
+      "params": {
+        "min_group_size": 20
+      },
+      "include_optional": false,
+      "price_cap_quantile": 0.99,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 648.7615815062802,
+        "mae_recommended": 1736.5024106961137,
+        "coverage": 0.7935346763945593,
+        "mean_interval_width": 3819.4227647947982
+      },
+      "std_selection_metric": 102.58952132170926,
+      "change_vs_base_pct": 0.0
+    },
+    {
+      "variant": "extreme_prices_capped_p99",
+      "model": "ridge",
+      "params": {
+        "alpha": 100.0
+      },
+      "include_optional": false,
+      "price_cap_quantile": 0.99,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 612.4488180871743,
+        "mae_recommended": 1582.318538797731,
+        "coverage": 0.8017005653808245,
+        "mean_interval_width": 3334.0646748784943
+      },
+      "std_selection_metric": 150.1463488811358,
+      "change_vs_base_pct": -13.366147454950749
+    },
+    {
+      "variant": "extreme_prices_capped_p99",
+      "model": "lightgbm",
+      "params": {
+        "n_estimators": 400,
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "min_child_samples": 50
+      },
+      "include_optional": false,
+      "price_cap_quantile": 0.99,
+      "status": "ok",
+      "mean": {
+        "pinball_recommended": 544.9277449290794,
+        "mae_recommended": 1433.7109958593123,
+        "coverage": 0.7415394497196776,
+        "mean_interval_width": 2776.2545437714825
+      },
+      "std_selection_metric": 91.93823996374385,
+      "change_vs_base_pct": -0.035508013797225235
+    }
+  ],
+  "note": "Cada umbral se aprende dentro del entrenamiento de cada partición. Las métricas se calculan contra el precio original de validación."
+}
