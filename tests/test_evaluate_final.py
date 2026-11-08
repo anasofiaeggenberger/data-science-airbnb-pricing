@@ -15,6 +15,8 @@ from src.evaluate_final import (
     load_test_set,
     main,
     run_final_evaluation,
+    train_and_serialize_winner,
+    validate_frozen_configuration,
 )
 
 
@@ -162,3 +164,109 @@ def test_price_cap_from_development_does_not_break_the_evaluation(snapshots) -> 
 def test_cli_refuses_to_touch_september_without_explicit_confirmation(capsys) -> None:
     assert main(["run"]) == 1
     assert "--confirm-frozen" in capsys.readouterr().out
+
+
+LISTING = {
+    "latitude": 19.41,
+    "longitude": -99.16,
+    "accommodates": 3,
+    "bathrooms": 1,
+    "bedrooms": 1,
+    "beds": 2,
+    "neighbourhood_cleansed": "Centro",
+    "property_type": "Apartment",
+    "room_type": "Entire home/apt",
+}
+
+WINNER_CONFIGURATIONS = {
+    "ridge": {"alpha": 1.0},
+    "lightgbm": {
+        "n_estimators": 40,
+        "learning_rate": 0.1,
+        "num_leaves": 15,
+        "min_child_samples": 10,
+    },
+}
+
+
+@pytest.mark.parametrize("model_name", ["ridge", "lightgbm"])
+def test_winner_is_retrained_serialized_and_usable_by_the_recommender(
+    snapshots, tmp_path: Path, model_name: str
+) -> None:
+    import joblib
+
+    from src.recommend import recommend
+
+    june, _ = snapshots
+    frozen = frozen_record(june)
+    frozen["model"] = model_name
+    frozen["params"] = WINNER_CONFIGURATIONS[model_name]
+
+    artifact_path = tmp_path / f"final_{model_name}.joblib"
+    result = train_and_serialize_winner(frozen, june, artifact_path)
+
+    assert artifact_path.exists()
+    saved = joblib.load(artifact_path)
+    assert set(saved) == {"model", "metadata"}
+    metadata = saved["metadata"]
+    assert metadata["test_evaluated"] is False
+    assert metadata["model"] == model_name
+    assert metadata["n_development_rows"] == 200
+    # La política de variables viaja con el artefacto.
+    assert "neighbourhood_cleansed" in metadata["feature_policy"]["categorical"]
+    assert "accommodates" in metadata["feature_policy"]["numeric"]
+    assert metadata["development_snapshot"] == "2026-06-15"
+
+    # El artefacto sirve al recomendador de Víctor sin adaptaciones.
+    quote = recommend(saved["model"], LISTING)
+    assert quote["currency"] == "MXN"
+    assert 0 < quote["lower_price"] <= quote["recommended_price"] <= quote["median_price"]
+    assert quote["median_price"] <= quote["upper_price"]
+    assert result["path"] == artifact_path
+
+
+def test_serialization_refuses_a_configuration_the_code_cannot_build(snapshots, tmp_path) -> None:
+    june, _ = snapshots
+    frozen = frozen_record(june)
+    frozen["model"] = "red neuronal"
+    with pytest.raises(ValueError, match="construible"):
+        train_and_serialize_winner(frozen, june, tmp_path / "x.joblib")
+
+
+def test_frozen_configuration_is_validated_before_anything_runs(snapshots) -> None:
+    june, _ = snapshots
+
+    incomplete = {"model": "baseline", "params": {}}
+    with pytest.raises(ValueError, match="no tiene"):
+        validate_frozen_configuration(incomplete)
+
+    already_evaluated = frozen_record(june) | {"test_evaluated": True}
+    with pytest.raises(ValueError, match="ya fue evaluada"):
+        validate_frozen_configuration(already_evaluated)
+
+    # Un contrato de cuantiles distinto haría incomparables los resultados.
+    other_contract = frozen_record(june)
+    other_contract["quantiles"] = {"p10": 0.10, "p25": 0.25, "p50": 0.50, "p90": 0.90}
+    with pytest.raises(ValueError, match="contrato de cuantiles"):
+        validate_frozen_configuration(other_contract)
+
+
+def test_cli_refuses_to_repeat_an_evaluation_that_already_exists(tmp_path, capsys) -> None:
+    results = tmp_path / "final_evaluation.json"
+    results.write_text("{}", encoding="utf-8")
+    frozen = tmp_path / "frozen.json"
+    frozen.write_text("{}", encoding="utf-8")
+    september = tmp_path / "september.csv.gz"
+    write_listings(september, ["L1"], ["$900.00"])
+
+    code = main(
+        [
+            "run",
+            "--confirm-frozen",
+            "--frozen", str(frozen),
+            "--september", str(september),
+            "--results", str(results),
+        ]
+    )
+    assert code == 1
+    assert "ya se ejecutó" in capsys.readouterr().out

@@ -11,11 +11,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import joblib
 import pandas as pd
 
 from src.audit_data import ids_from_file
 from src.metrics import QUANTILE_LEVELS, SELECTION_METRIC, evaluate_quantile_predictions
-from src.modeling_data import load_development, prepare_features
+from src.modeling_data import feature_columns, load_development, prepare_features
 from src.preparation import (
     DEFAULT_JUNE_PATH,
     DEFAULT_SEPTEMBER_PATH,
@@ -29,6 +30,7 @@ DEFAULT_COMPARISON_PATH = REPO_ROOT / "docs" / "model_comparison.json"
 DEFAULT_FROZEN_PATH = REPO_ROOT / "docs" / "frozen_solution.json"
 DEFAULT_RESULTS_PATH = REPO_ROOT / "docs" / "final_evaluation.json"
 DEFAULT_TEST_PREDICTIONS_PATH = REPO_ROOT / "data" / "processed" / "test_predictions.csv"
+DEFAULT_MODEL_DIR = REPO_ROOT / "models"
 
 UNKNOWN_HOST = "__unknown_host__"
 
@@ -98,6 +100,93 @@ def freeze_solution(
     return frozen
 
 
+def validate_frozen_configuration(frozen: dict[str, Any]) -> None:
+    """Comprueba que la configuración congelada sea usable por el código actual."""
+
+    missing = {"model", "params", "include_optional", "quantiles"} - set(frozen)
+    if missing:
+        raise ValueError(f"La solución congelada no tiene {sorted(missing)}.")
+    if frozen.get("test_evaluated"):
+        raise ValueError("Esa solución ya fue evaluada contra el test; no se repite.")
+    if dict(frozen["quantiles"]) != dict(QUANTILE_LEVELS):
+        # Evaluar con otro contrato de cuantiles haría incomparables los resultados.
+        raise ValueError("El contrato de cuantiles congelado no coincide con src/metrics.py.")
+    try:
+        build_model(frozen["model"], dict(frozen["params"]), frozen["include_optional"])
+    except Exception as error:
+        raise ValueError(f"La configuración congelada ya no es construible: {error}") from error
+
+
+def _fit_frozen_model(frozen: dict[str, Any], X: pd.DataFrame, y: pd.Series, groups: Any) -> Any:
+    """Entrena la configuración congelada, aplicando su tope de precios si lo define."""
+
+    y_fit = y
+    cap_quantile = frozen.get("price_cap_quantile")
+    if cap_quantile is not None:
+        # El tope se aprende con desarrollo, nunca con el test.
+        y_fit = y.clip(upper=float(y.quantile(cap_quantile)))
+    model = build_model(frozen["model"], dict(frozen["params"]), frozen["include_optional"])
+    return model.fit(X, y_fit, groups=groups)
+
+
+def _check_quantile_contract(predictions: pd.DataFrame) -> None:
+    values = predictions.loc[:, QUANTILE_COLUMNS].to_numpy(dtype=float)
+    if not pd.notna(values).all() or (values <= 0).any():
+        raise ValueError("El artefacto produjo cuantiles nulos o no positivos.")
+    if (values[:, 1:] < values[:, :-1]).any():
+        raise ValueError("El artefacto produjo cuantiles cruzados.")
+
+
+def train_and_serialize_winner(
+    frozen: dict[str, Any],
+    june_path: Path = DEFAULT_JUNE_PATH,
+    output_path: Path | None = None,
+    sample_rows: int = 200,
+) -> dict[str, Any]:
+    """Reentrena la solución congelada con todo el desarrollo y guarda el artefacto joblib.
+
+    El artefacto queda en el formato que consume `src/recommend.py`: un diccionario
+    con `model` y `metadata`. No abre el snapshot de septiembre.
+    """
+
+    validate_frozen_configuration(frozen)
+    X, y, metadata = load_development(june_path)
+    model = _fit_frozen_model(frozen, X, y, metadata["host_id"])
+
+    # Contrato verificado sobre desarrollo antes de guardar: positivo y ordenado.
+    _check_quantile_contract(model.predict(X.head(min(sample_rows, len(X)))))
+
+    numeric, categorical = feature_columns(frozen["include_optional"])
+    artifact_metadata = {
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "status": "frozen_development_winner",
+        "test_evaluated": False,
+        "development_snapshot": "2026-06-15",
+        "n_development_rows": int(len(X)),
+        "model": frozen["model"],
+        "params": frozen["params"],
+        "include_optional": frozen["include_optional"],
+        "price_cap_quantile": frozen.get("price_cap_quantile"),
+        "feature_policy": {"numeric": list(numeric), "categorical": list(categorical)},
+        "quantiles": frozen["quantiles"],
+        "selection_metric": frozen.get("selection_metric"),
+        "development_metrics": frozen.get("development_metrics"),
+        "fold_assignment_sha256": frozen.get("fold_assignment_sha256"),
+        "june_sha256": frozen.get("june_sha256"),
+        "python_version": sys.version.split()[0],
+        "limitation": (
+            "Entrenado solo con junio. Estima precios publicados comparables; no promete "
+            "reservas, ingresos ni cobertura individual del intervalo."
+        ),
+    }
+
+    if output_path is None:
+        output_path = DEFAULT_MODEL_DIR / f"final_{frozen['model']}.joblib"
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump({"model": model, "metadata": artifact_metadata}, Path(output_path))
+    return {"model": model, "metadata": artifact_metadata, "path": Path(output_path)}
+
+
 def run_final_evaluation(
     frozen: dict[str, Any],
     june_path: Path = DEFAULT_JUNE_PATH,
@@ -113,15 +202,8 @@ def run_final_evaluation(
                 "El snapshot de junio no coincide con el que se usó para congelar la solución."
             )
 
-    y_fit = y_dev
-    cap_quantile = frozen.get("price_cap_quantile")
-    if cap_quantile is not None:
-        # El tope se aprende con desarrollo, nunca con el test.
-        cap = float(y_dev.quantile(cap_quantile))
-        y_fit = y_dev.clip(upper=cap)
-
-    model = build_model(frozen["model"], dict(frozen["params"]), frozen["include_optional"])
-    model.fit(X_dev, y_fit, groups=metadata_dev["host_id"])
+    validate_frozen_configuration(frozen)
+    model = _fit_frozen_model(frozen, X_dev, y_dev, metadata_dev["host_id"])
 
     X_test, y_test, metadata_test = load_test_set(june_path, september_path)
     predictions = model.predict(X_test)
@@ -163,6 +245,13 @@ def build_parser() -> argparse.ArgumentParser:
     freeze.add_argument("--comparison", type=Path, default=DEFAULT_COMPARISON_PATH)
     freeze.add_argument("--output", type=Path, default=DEFAULT_FROZEN_PATH)
     freeze.add_argument("--model", type=str, default=None)
+    freeze.add_argument("--june", type=Path, default=DEFAULT_JUNE_PATH)
+    freeze.add_argument("--artifact", type=Path, default=None)
+    freeze.add_argument(
+        "--skip-artifact",
+        action="store_true",
+        help="Solo guardar la configuración, sin reentrenar ni serializar el modelo.",
+    )
 
     run = sub.add_parser("run", help="Evaluar una sola vez sobre septiembre.")
     run.add_argument("--frozen", type=Path, default=DEFAULT_FROZEN_PATH)
@@ -175,6 +264,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Confirma que el equipo congeló la solución. Sin esto no se toca septiembre.",
     )
+    run.add_argument(
+        "--allow-rerun",
+        action="store_true",
+        help="Permite sobrescribir una evaluación final ya ejecutada. Normalmente no se usa.",
+    )
     return parser
 
 
@@ -184,7 +278,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "freeze":
         frozen = freeze_solution(args.comparison, args.output, args.model)
         print(f"Solución congelada: {frozen['model']} {frozen['params']}")
-        print(f"Guardada en {args.output}. Septiembre sigue sin evaluarse.")
+        print(f"Configuración en {args.output}.")
+        if args.skip_artifact:
+            print("Artefacto no generado (--skip-artifact).")
+        else:
+            artifact = train_and_serialize_winner(frozen, args.june, args.artifact)
+            print(f"Artefacto entrenado con {artifact['metadata']['n_development_rows']} filas "
+                  f"de junio y guardado en {artifact['path']}.")
+            print("Uso: uv run python -m src.recommend --model "
+                  f"{artifact['path']} --listing examples/listing.json")
+        print("Septiembre sigue sin evaluarse.")
         return 0
 
     if not args.confirm_frozen:
@@ -200,6 +303,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if not Path(args.september).exists():
         print(f"No existe el snapshot de test en {args.september}.")
+        return 1
+    if Path(args.results).exists() and not args.allow_rerun:
+        # El test es de un solo uso: repetirlo invalidaría su carácter de estimación independiente.
+        print(
+            f"Ya existe {args.results}: esta evaluación final ya se ejecutó.\n"
+            "El test temporal se evalúa una sola vez. Si de verdad hay que repetirla, "
+            "documentar el motivo y usar --allow-rerun."
+        )
         return 1
 
     frozen = json.loads(Path(args.frozen).read_text(encoding="utf-8"))
