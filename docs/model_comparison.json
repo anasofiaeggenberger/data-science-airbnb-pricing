@@ -1,0 +1,514 @@
+{
+  "created_at_utc": "2026-11-08T21:46:29.149346+00:00",
+  "snapshot": "2026-06-15",
+  "test_evaluated": false,
+  "n_rows": 29637,
+  "n_hosts": 13095,
+  "outer_folds": 5,
+  "include_optional": false,
+  "quick": false,
+  "quantiles": {
+    "p10": 0.1,
+    "p35": 0.35,
+    "p50": 0.5,
+    "p90": 0.9
+  },
+  "selection_metric": "pinball_recommended",
+  "fold_assignment_sha256": "0bc17e53368075dfcc00702ad0e9b2061e04d670b93fb1004b062b7eb5a27508",
+  "june_sha256": "bbe24eee4a96cb41a157e8b3eed9420225ec9fb94137233d9c2f4ce6d64eebfe",
+  "python_version": "3.12.8",
+  "platform": "macOS-15.7.3-arm64-arm-64bit",
+  "models": [
+    {
+      "model": "baseline",
+      "selected_params": {
+        "min_group_size": 20
+      },
+      "configurations_evaluated": 1,
+      "mean": {
+        "pinball_recommended": 648.7615815062802,
+        "mae_recommended": 1736.5024106961137,
+        "mae_median": 1693.4003573426357,
+        "coverage": 0.7935346763945593,
+        "mean_interval_width": 3827.52012642108,
+        "crossing_rate_before_sorting": 0.0,
+        "quantile_crossing_rate": 0.0,
+        "n_observations": 5927.4
+      },
+      "std": {
+        "pinball_recommended": 102.58952132170926,
+        "mae_recommended": 295.41533717447066,
+        "mae_median": 287.94328750196706,
+        "coverage": 0.010295993184557402,
+        "mean_interval_width": 98.27502128408292,
+        "crossing_rate_before_sorting": 0.0,
+        "quantile_crossing_rate": 0.0,
+        "n_observations": 0.5477225575051662
+      },
+      "fold_metrics": [
+        {
+          "n_observations": 5928.0,
+          "pinball_p10": 246.28489257759784,
+          "pinball_p35": 746.5864986040822,
+          "pinball_p50": 981.1941455802968,
+          "pinball_p90": 1092.1710262820513,
+          "pinball_recommended": 746.5864986040822,
+          "mae_recommended": 2020.6079513326586,
+          "mae_median": 1962.3882911605936,
+          "coverage": 0.7882928475033738,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.011707152496626239,
+          "mean_interval_width": 3759.525752361673,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 0.0
+        },
+        {
+          "n_observations": 5928.0,
+          "pinball_p10": 186.07389536099865,
+          "pinball_p35": 543.7229127783401,
+          "pinball_p50": 704.1159299089069,
+          "pinball_p90": 753.8658019905531,
+          "pinball_recommended": 543.7229127783401,
+          "mae_recommended": 1436.7010693319837,
+          "mae_median": 1408.2318598178138,
+          "coverage": 0.8115721997300944,
+          "nominal_coverage": 0.8,
+          "coverage_gap": 0.011572199730094379,
+          "mean_interval_width": 3982.4107589406235,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 1.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 251.43645231989206,
+          "pinball_p35": 768.5680782436308,
+          "pinball_p50": 1018.4438611439177,
+          "pinball_p90": 1236.6451212249028,
+          "pinball_recommended": 768.5680782436308,
+          "mae_recommended": 2079.563246836511,
+          "mae_median": 2036.8877222878355,
+          "coverage": 0.7919689556267926,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.008031044373207452,
+          "mean_interval_width": 3742.835114560488,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 2.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 206.77815142567914,
+          "pinball_p35": 612.5082054960351,
+          "pinball_p50": 793.2048342331702,
+          "pinball_p90": 817.5931812890165,
+          "pinball_recommended": 612.5082054960351,
+          "mae_recommended": 1632.8590999662558,
+          "mae_median": 1586.4096684663405,
+          "coverage": 0.7896068837523199,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.010393116247680134,
+          "mean_interval_width": 3864.1211354816937,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 3.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 196.64282780496035,
+          "pinball_p35": 572.4222124093133,
+          "pinball_p50": 736.5421224902987,
+          "pinball_p90": 750.7275329171588,
+          "pinball_recommended": 572.4222124093133,
+          "mae_recommended": 1512.7806860131602,
+          "mae_median": 1473.0842449805973,
+          "coverage": 0.786232495360216,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.013767504639784045,
+          "mean_interval_width": 3788.7078707609253,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 4.0
+        }
+      ],
+      "search": [
+        {
+          "params": {
+            "min_group_size": 20
+          },
+          "mean_selection_metric": 648.7615815062802
+        }
+      ]
+    },
+    {
+      "model": "ridge",
+      "selected_params": {
+        "alpha": 100.0
+      },
+      "configurations_evaluated": 4,
+      "mean": {
+        "pinball_recommended": 706.9393777319362,
+        "mae_recommended": 1722.081286922657,
+        "mae_median": 1714.4411165920624,
+        "coverage": 0.8020042717206899,
+        "mean_interval_width": 3661.318153912992,
+        "crossing_rate_before_sorting": 0.0,
+        "quantile_crossing_rate": 0.0,
+        "n_observations": 5927.4
+      },
+      "std": {
+        "pinball_recommended": 352.24328232934084,
+        "mae_recommended": 644.4812168863322,
+        "mae_median": 725.1135622172167,
+        "coverage": 0.00834696036381951,
+        "mean_interval_width": 801.1492201140512,
+        "crossing_rate_before_sorting": 0.0,
+        "quantile_crossing_rate": 0.0,
+        "n_observations": 0.5477225575051662
+      },
+      "fold_metrics": [
+        {
+          "n_observations": 5928.0,
+          "pinball_p10": 229.99881513203013,
+          "pinball_p35": 658.7931668716813,
+          "pinball_p50": 845.2896794097572,
+          "pinball_p90": 871.4218728565922,
+          "pinball_recommended": 658.7931668716813,
+          "mae_recommended": 1764.2545066379444,
+          "mae_median": 1690.5793588195145,
+          "coverage": 0.793353576248313,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.006646423751687003,
+          "mean_interval_width": 3324.131885094088,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 0.0
+        },
+        {
+          "n_observations": 5928.0,
+          "pinball_p10": 185.82406856896057,
+          "pinball_p35": 505.81909450550756,
+          "pinball_p50": 637.268534795503,
+          "pinball_p90": 645.3834319984011,
+          "pinball_recommended": 505.81909450550756,
+          "mae_recommended": 1299.494005645751,
+          "mae_median": 1274.537069591006,
+          "coverage": 0.8100539811066126,
+          "nominal_coverage": 0.8,
+          "coverage_gap": 0.010053981106612597,
+          "mean_interval_width": 3258.4178350275374,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 1.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 818.2565045122188,
+          "pinball_p35": 1326.6768419328907,
+          "pinball_p50": 1487.1053741963592,
+          "pinball_p90": 1364.114690704301,
+          "pinball_recommended": 1326.6768419328907,
+          "mae_recommended": 2824.3335201475575,
+          "mae_median": 2974.2107483927184,
+          "coverage": 0.7995613295090265,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.00043867049097356947,
+          "mean_interval_width": 5092.818288052002,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 2.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 195.23008624291128,
+          "pinball_p35": 542.1367027651673,
+          "pinball_p50": 683.8203507115242,
+          "pinball_p90": 663.1226851610732,
+          "pinball_recommended": 542.1367027651673,
+          "mae_recommended": 1413.9845743556407,
+          "mae_median": 1367.6407014230483,
+          "coverage": 0.7955120634385018,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.0044879365614982625,
+          "mean_interval_width": 3355.095963653572,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 3.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 179.20738742773096,
+          "pinball_p35": 501.2710825844343,
+          "pinball_p50": 632.618852367013,
+          "pinball_p90": 617.8666687642116,
+          "pinball_recommended": 501.2710825844343,
+          "mae_recommended": 1308.3398278263921,
+          "mae_median": 1265.237704734026,
+          "coverage": 0.8115404083009955,
+          "nominal_coverage": 0.8,
+          "coverage_gap": 0.011540408300995453,
+          "mean_interval_width": 3276.126797737758,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0,
+          "fold": 4.0
+        }
+      ],
+      "search": [
+        {
+          "params": {
+            "alpha": 0.1
+          },
+          "mean_selection_metric": 749.5223920163273
+        },
+        {
+          "params": {
+            "alpha": 1.0
+          },
+          "mean_selection_metric": 748.5296199173374
+        },
+        {
+          "params": {
+            "alpha": 10.0
+          },
+          "mean_selection_metric": 739.4543634050302
+        },
+        {
+          "params": {
+            "alpha": 100.0
+          },
+          "mean_selection_metric": 706.9393777319362
+        }
+      ]
+    },
+    {
+      "model": "lightgbm",
+      "selected_params": {
+        "n_estimators": 400,
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "min_child_samples": 50
+      },
+      "configurations_evaluated": 12,
+      "mean": {
+        "pinball_recommended": 545.1213066778662,
+        "mae_recommended": 1433.271342951271,
+        "mae_median": 1410.6129745717274,
+        "coverage": 0.7407633859277986,
+        "mean_interval_width": 3119.1254529094317,
+        "crossing_rate_before_sorting": 0.04980285329356928,
+        "quantile_crossing_rate": 0.0,
+        "n_observations": 5927.4
+      },
+      "std": {
+        "pinball_recommended": 91.53836562478385,
+        "mae_recommended": 265.3448477814145,
+        "mae_median": 263.6514865215447,
+        "coverage": 0.007289924826549726,
+        "mean_interval_width": 136.49955706833438,
+        "crossing_rate_before_sorting": 0.006366423270860587,
+        "quantile_crossing_rate": 0.0,
+        "n_observations": 0.5477225575051662
+      },
+      "fold_metrics": [
+        {
+          "n_observations": 5928.0,
+          "pinball_p10": 214.52485472948004,
+          "pinball_p35": 621.3603568152384,
+          "pinball_p50": 804.9833018657481,
+          "pinball_p90": 828.1494328169763,
+          "pinball_recommended": 621.3603568152384,
+          "mae_recommended": 1668.3112488313407,
+          "mae_median": 1609.9666037314962,
+          "coverage": 0.7299257759784076,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.07007422402159247,
+          "mean_interval_width": 3028.7077626099554,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.0386302294197031,
+          "fold": 0.0
+        },
+        {
+          "n_observations": 5928.0,
+          "pinball_p10": 167.93389863660005,
+          "pinball_p35": 466.7022387250475,
+          "pinball_p50": 594.9728621402853,
+          "pinball_p90": 616.0790747106192,
+          "pinball_recommended": 466.7022387250475,
+          "mae_recommended": 1202.0775733738265,
+          "mae_median": 1189.9457242805706,
+          "coverage": 0.7471322537112011,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.05286774628879898,
+          "mean_interval_width": 3161.976422763541,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.05381241565452092,
+          "fold": 1.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 226.60077474760047,
+          "pinball_p35": 663.0065683014901,
+          "pinball_p50": 883.751789779741,
+          "pinball_p90": 1081.19201171992,
+          "pinball_recommended": 663.0065683014901,
+          "mae_recommended": 1765.4768784862322,
+          "mae_median": 1767.503579559482,
+          "coverage": 0.7373038636747089,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.06269613632529114,
+          "mean_interval_width": 3073.5039302829878,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.05078454530116416,
+          "fold": 2.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 178.7624674221803,
+          "pinball_p35": 509.22728115610295,
+          "pinball_p50": 648.6511395058415,
+          "pinball_p90": 640.4814835542732,
+          "pinball_recommended": 509.22728115610295,
+          "mae_recommended": 1320.5236926780765,
+          "mae_median": 1297.302279011683,
+          "coverage": 0.7423654462628648,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.05763455373713522,
+          "mean_interval_width": 3336.150798598535,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.052134300658005735,
+          "fold": 3.0
+        },
+        {
+          "n_observations": 5927.0,
+          "pinball_p10": 168.01142641465717,
+          "pinball_p35": 465.31008839145215,
+          "pinball_p50": 594.1733431377025,
+          "pinball_p90": 587.2119652817489,
+          "pinball_recommended": 465.31008839145215,
+          "mae_recommended": 1209.9673213868784,
+          "mae_median": 1188.346686275405,
+          "coverage": 0.7470895900118104,
+          "nominal_coverage": 0.8,
+          "coverage_gap": -0.05291040998818963,
+          "mean_interval_width": 2995.2883502921377,
+          "quantile_crossing_rate": 0.0,
+          "crossing_rate_before_sorting": 0.05365277543445251,
+          "fold": 4.0
+        }
+      ],
+      "search": [
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.05,
+            "num_leaves": 15,
+            "min_child_samples": 20
+          },
+          "mean_selection_metric": 548.7991517905513
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.05,
+            "num_leaves": 15,
+            "min_child_samples": 50
+          },
+          "mean_selection_metric": 546.7062495946085
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.1,
+            "num_leaves": 15,
+            "min_child_samples": 20
+          },
+          "mean_selection_metric": 550.2744882256046
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.1,
+            "num_leaves": 15,
+            "min_child_samples": 50
+          },
+          "mean_selection_metric": 546.0897120680605
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.05,
+            "num_leaves": 31,
+            "min_child_samples": 20
+          },
+          "mean_selection_metric": 547.2903500354663
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.05,
+            "num_leaves": 31,
+            "min_child_samples": 50
+          },
+          "mean_selection_metric": 545.1213066778662
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.1,
+            "num_leaves": 31,
+            "min_child_samples": 20
+          },
+          "mean_selection_metric": 549.8093978796493
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.1,
+            "num_leaves": 31,
+            "min_child_samples": 50
+          },
+          "mean_selection_metric": 545.8592288042555
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.05,
+            "num_leaves": 63,
+            "min_child_samples": 20
+          },
+          "mean_selection_metric": 548.7295049072721
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.05,
+            "num_leaves": 63,
+            "min_child_samples": 50
+          },
+          "mean_selection_metric": 545.6518636467492
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.1,
+            "num_leaves": 63,
+            "min_child_samples": 20
+          },
+          "mean_selection_metric": 551.440147618248
+        },
+        {
+          "params": {
+            "n_estimators": 400,
+            "learning_rate": 0.1,
+            "num_leaves": 63,
+            "min_child_samples": 50
+          },
+          "mean_selection_metric": 548.4051328807269
+        }
+      ]
+    }
+  ],
+  "winner": "lightgbm",
+  "limitation": "Validación usada para seleccionar configuración; no es una estimación independiente. El test de septiembre no participa."
+}
