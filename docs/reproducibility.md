@@ -12,6 +12,10 @@ uv run python -m src.recommend --model models/ridge.joblib --listing examples/li
 
 La descarga comprueba el SHA-256 ya registrado y no cambia los manifiestos originales. Por defecto solo descarga junio. La búsqueda utiliza 4 alphas, 5 folds externos y 3 folds internos de calibración. Cada candidato ajusta nuevamente su preprocesamiento dentro de cada entrenamiento. El resultado es un candidato Ridge, no el ganador global.
 
+Las métricas de `src/train_ridge.py` son provisionales: usa funciones de scikit-learn para pinball/MAE y cálculos locales de cobertura/amplitud. `src/metrics.py` está pendiente de integración desde la rama de métricas y baseline. El informe y los metadatos del modelo guardan `metrics_status=provisional_pending_shared_metrics` y la implementación utilizada. Tras integrar las métricas comunes, se deben conectar a `evaluate_quantile_predictions` y regenerar los resultados de desarrollo antes de compararlos entre familias.
+
+`joblib` está declarado como dependencia directa para guardar y cargar modelos. La prueba `tests/test_recommend_integration.py` cubre entrenamiento sintético, serialización y ejecución del recomendador en otro proceso, tanto con el diccionario de modelo/metadatos como con el modelo directo.
+
 Artefactos: `docs/ridge_validation.json` guarda resultados y procedencia; `data/processed/development_folds.csv` guarda posiciones por id/host; `data/processed/ridge_oof.csv` contiene predicciones de validación; `models/ridge.joblib` contiene el modelo y metadatos. Los CSV y modelos siguen ignorados por Git. No confundir `ridge_oof.csv` con test: todas sus filas son de junio.
 
 Sensibilidad opcional, sin sobrescribir el candidato principal:

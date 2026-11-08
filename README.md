@@ -4,7 +4,7 @@ Proyecto final de Ciencia de Datos — segundo semestre 2026, UFM.
 
 Pregunta: ¿qué precio por noche debe cobrar un anfitrión nuevo de Airbnb en Ciudad de México? El objetivo es recomendar un precio en MXN y un rango razonable usando anuncios reales de Inside Airbnb. La propuesta contempla un baseline de mediana por alcaldía y tipo de alojamiento, regresión lineal regularizada sobre `log(precio)` y LightGBM con pérdida por cuantiles. La métrica principal será pinball loss, además de MAE y cobertura del intervalo.
 
-Esta entrega cubre las Fases 1 y 2: infraestructura, adquisición, auditoría inicial, preparación de datos y EDA descriptivo sobre junio. No incluye entrenamiento de modelos ni resultados inventados.
+El repositorio incluye adquisición, auditoría, preparación de datos, EDA, entrenamiento y validación de Ridge sobre junio, además de un recomendador que carga el modelo guardado. Las métricas locales de Ridge son provisionales hasta integrar las métricas comunes. La comparación entre baseline, Ridge y LightGBM y la evaluación final de septiembre permanecen pendientes de integración.
 
 ## Fuente y snapshots
 
@@ -26,7 +26,7 @@ models/            modelos; ignorados por Git
 notebooks/         notebooks reproducibles
 presentation/      materiales de presentación
 reports/figures/   figuras generadas
-src/               adquisición y auditoría
+src/               adquisición, preparación, entrenamiento e inferencia
 tests/             pruebas pequeñas de funciones críticas
 ```
 
@@ -97,7 +97,7 @@ uv run jupyter nbconvert --to notebook --execute --inplace \
 
 La notebook depende del snapshot de junio en `data/raw/`, que está ignorado por Git, y regenera `data/processed/development_clean.csv` y las figuras ignoradas. Los JSON y la política en `docs/` sí se conservan en Git. `docs/cleaning_log.json` registra estadísticas ajustadas sobre todo junio para EDA y desarrollo final; no se debe partir luego ese CSV para validación interna.
 
-## Regla para validación interna futura
+## Regla para validación interna
 
 Antes de cualquier validación cruzada o partición interna de junio, se debe separar el fold y ajustar dentro del fold de entrenamiento todas las reglas que aprendan de datos: imputaciones, agrupación de categorías raras, escalado y umbrales de extremos. Después se aplican esas reglas al fold de validación. Las estadísticas descriptivas de `docs/cleaning_log.json` y de la notebook son solo EDA. El precio objetivo de validación debe conservarse en su escala original para calcular pinball loss, MAE y cobertura. El snapshot de septiembre no participa en ninguna de estas decisiones.
 
@@ -113,7 +113,7 @@ uv lock --check
 git diff --check
 ```
 
-Las pruebas cubren parseo numérico de `price`, estados de validez, separación temporal, reglas de limpieza, extracción de enlaces detallados y auditoría de IDs/moneda en archivos pequeños temporales.
+Las pruebas cubren adquisición y limpieza, separación por anfitrión, preprocesamiento sin fugas, cuantiles de Ridge y validación de entradas. La prueba de integración entrena con datos sintéticos, guarda el modelo y ejecuta el recomendador desde la línea de comandos con el artefacto guardado, sin usar los snapshots reales.
 
 ## Flujo colaborativo
 
@@ -127,4 +127,4 @@ Las pruebas cubren parseo numérico de `price`, estados de validez, separación 
 
 La base para modelar, las particiones por anfitrión, Ridge con calibración de residuos y el recomendador están implementados. Véanse [contrato común](docs/modeling_contract.md), [comandos reproducibles](docs/reproducibility.md) y [notebook de Ridge](notebooks/03_ridge_recommender.ipynb).
 
-La sección inicial de Fases 1 y 2 describe la entrega de datos anterior. Este avance añade validación de Ridge exclusivamente en junio. No declara un ganador entre familias ni evalúa septiembre. La comparación con baseline/LightGBM y la evaluación final del test permanecen pendientes. Los resultados de esta búsqueda están en `docs/ridge_validation.json`; la bitácora de esta sesión está en `docs/ai/modeling_log.md`.
+La validación de Ridge utiliza exclusivamente junio. `src/train_ridge.py` calcula métricas locales provisionales; su procedencia y estado quedan registrados como `metrics_implementation` y `metrics_status` en el modelo y el informe. Al integrar `src/metrics.py`, se deberá usar `evaluate_quantile_predictions` y regenerar la comparación común. La búsqueda actual no declara un ganador entre familias ni evalúa septiembre. Sus resultados están en `docs/ridge_validation.json`; la bitácora está en `docs/ai/modeling_log.md`.
