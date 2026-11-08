@@ -1,0 +1,12 @@
+{
+  "latitude": 19.42,
+  "longitude": -99.16,
+  "accommodates": 2,
+  "bathrooms": 1,
+  "bedrooms": 1,
+  "beds": 1,
+  "amenities_count": 10,
+  "neighbourhood_cleansed": "Cuauhtémoc",
+  "property_type": "Entire rental unit",
+  "room_type": "Entire home/apt"
+}
