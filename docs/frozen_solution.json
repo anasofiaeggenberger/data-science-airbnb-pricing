@@ -1,0 +1,35 @@
+{
+  "frozen_at_utc": "2026-11-08T23:37:04.763109+00:00",
+  "model": "lightgbm",
+  "params": {
+    "n_estimators": 400,
+    "learning_rate": 0.05,
+    "num_leaves": 31,
+    "min_child_samples": 50
+  },
+  "include_optional": false,
+  "price_cap_quantile": null,
+  "quantiles": {
+    "p10": 0.1,
+    "p35": 0.35,
+    "p50": 0.5,
+    "p90": 0.9
+  },
+  "selection_metric": "pinball_recommended",
+  "development_metrics": {
+    "pinball_recommended": 545.1213066778662,
+    "mae_recommended": 1433.271342951271,
+    "mae_median": 1410.6129745717274,
+    "coverage": 0.7407633859277986,
+    "mean_interval_width": 3119.1254529094317,
+    "crossing_rate_before_sorting": 0.04980285329356928,
+    "quantile_crossing_rate": 0.0,
+    "n_observations": 5927.4
+  },
+  "fold_assignment_sha256": "0bc17e53368075dfcc00702ad0e9b2061e04d670b93fb1004b062b7eb5a27508",
+  "june_sha256": "bbe24eee4a96cb41a157e8b3eed9420225ec9fb94137233d9c2f4ce6d64eebfe",
+  "source_comparison": "model_comparison.json",
+  "test_evaluated": false,
+  "artifact_path": "models/final_lightgbm.joblib",
+  "artifact_sha256": "3634974edc7888569781f9ce5382ab60ed3345408205bef5b304851f30c195d3"
+}
