@@ -52,10 +52,19 @@ el objetivo original no se modifica en el camino.
 
 ## Evidencia por segmentos
 
-`src/segments.py` produce tablas por alcaldía, tipo de alojamiento y banda de precio (cuartiles del
-precio observado, descriptivos). Cada fila lleva su **tamaño de muestra** y una marca
-`enough_evidence`, falsa por debajo de 30 observaciones, para que la interpretación no saque
-conclusiones de grupos diminutos.
+`src/segments.py` produce tablas por alcaldía, tipo de alojamiento y banda de precio. Cada fila lleva
+su **tamaño de muestra** y una marca `enough_evidence`, falsa por debajo de 30 observaciones, para que
+la interpretación no saque conclusiones de grupos diminutos.
+
+**Las bandas de precio son análisis descriptivo posterior a la predicción, nunca variables
+predictoras ni criterio de selección.** Se construyen con cuartiles del precio real observado, que es
+el objetivo: usarlas como entrada del modelo sería una fuga directa, y usarlas para elegir modelo o
+hiperparámetros sería seleccionar mirando el objetivo. Solo sirven para responder dónde falla más el
+modelo una vez que ya predijo, y por eso se calculan después de evaluar, sobre las mismas filas de
+validación.
+
+Las tres columnas de segmento se agrupan igual: ninguna entra al modelo. `neighbourhood_cleansed` y
+`room_type` sí son predictores permitidos, pero en estas tablas se usan solo para cortar resultados.
 
 Esas tablas son insumo para el análisis de errores; este documento no las interpreta.
 

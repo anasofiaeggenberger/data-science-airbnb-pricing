@@ -14,15 +14,28 @@ Registros completos: [`docs/model_comparison.json`](model_comparison.json) y
   Coincide con la de `docs/ridge_validation.json`, así que los tres modelos y la validación de Ridge
   compararon sobre exactamente las mismas filas.
 
+La comparación se regeneró después de integrar `main` con los PR #2 y #3 fusionados, para incorporar
+la nueva medición de cruces antes de ordenar. Las demás cifras salieron **idénticas** a la corrida
+previa, hasta el sexto decimal, y la huella de particiones no cambió. Era lo esperado: las
+correcciones posteriores de Víctor no tocaron `modeling_data.py`, `preprocessing.py` ni
+`ridge_model.py`, así que los modelos son los mismos. Esa coincidencia vale como comprobación de
+reproducibilidad.
+
 ## Comparación
 
 Medias entre las cinco particiones, en MXN contra el precio original de validación.
 
-| Modelo | pinball p35 | desv. entre folds | MAE recomendado | MAE mediana | cobertura | amplitud media | cruces |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| baseline | 648.76 | 102.59 | 1736.50 | 1693.40 | 0.794 | 3827.52 | 0 |
-| ridge (α=100) | 706.94 | 352.24 | 1722.08 | 1714.44 | 0.802 | 3661.32 | 0 |
-| **lightgbm** | **545.12** | **91.54** | 1433.27 | 1410.61 | 0.741 | 3119.13 | 0 |
+| Modelo | pinball p35 | desv. entre folds | MAE recomendado | MAE mediana | cobertura | amplitud media | cruces antes | cruces después |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 648.76 | 102.59 | 1736.50 | 1693.40 | 0.794 | 3827.52 | 0.0 % | 0.0 % |
+| ridge (α=100) | 706.94 | 352.24 | 1722.08 | 1714.44 | 0.802 | 3661.32 | 0.0 % | 0.0 % |
+| **lightgbm** | **545.12** | **91.54** | 1433.27 | 1410.61 | 0.741 | 3119.13 | **4.98 %** | 0.0 % |
+
+Las dos últimas columnas son el porcentaje de filas con cuantiles cruzados antes y después del paso
+de ordenamiento. El baseline y Ridge no ordenan nada: sus cuantiles no pueden cruzarse por
+construcción, así que ambas columnas son cero. LightGBM entrena un modelo por cuantil de forma
+independiente, y en el 4.98 % de las filas de validación al menos un par sale fuera de orden; el
+contrato las reordena y después del paso no queda ninguna.
 
 Configuración elegida para LightGBM: `n_estimators=400`, `learning_rate=0.05`, `num_leaves=31`,
 `min_child_samples=50`.
@@ -114,6 +127,24 @@ menos sirve.
 
 `Milpa Alta` (n=25) queda marcada con `enough_evidence = false` en los tres modelos: cualquier
 conclusión sobre esa alcaldía descansa en muy poca evidencia.
+
+## Modelo ganador y artefacto
+
+`evaluate_final freeze` guarda la configuración ganadora, la reentrena con las 29,637 filas de junio
+y serializa `{'model': ..., 'metadata': ...}` en `models/final_<modelo>.joblib`, en el formato que ya
+consume `src/recommend.py`. Antes de guardar comprueba sobre desarrollo que los cuantiles salgan
+positivos y ordenados.
+
+La metadata del artefacto viaja con el modelo: configuración, política de variables, contrato de
+cuantiles, métricas de desarrollo, huella de particiones, SHA-256 de junio y `test_evaluated: false`.
+
+Ese paso es anterior e independiente de la evaluación de septiembre: produce el modelo que se va a
+evaluar, no la evaluación. El artefacto queda fuera de Git y se reconstruye con el comando.
+
+**Al momento de escribir esto la solución no ha sido congelada**, porque congelar es una decisión del
+equipo y Sofi debe revisar antes que la selección esté documentada. El flujo sí se verificó de punta
+a punta sobre junio real, escribiendo en rutas temporales: entrenó con 29,637 filas, serializó, y el
+recomendador cargó el artefacto y devolvió los cuatro cuantiles en MXN, positivos y ordenados.
 
 ## Qué es y qué no es esto
 

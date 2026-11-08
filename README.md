@@ -4,7 +4,7 @@ Proyecto final de Ciencia de Datos — segundo semestre 2026, UFM.
 
 Pregunta: ¿qué precio por noche debe cobrar un anfitrión nuevo de Airbnb en Ciudad de México? El objetivo es recomendar un precio en MXN y un rango razonable usando anuncios reales de Inside Airbnb. La propuesta contempla un baseline de mediana por alcaldía y tipo de alojamiento, regresión lineal regularizada sobre `log(precio)` y LightGBM con pérdida por cuantiles. La métrica principal será pinball loss, además de MAE y cobertura del intervalo.
 
-El repositorio incluye adquisición, auditoría, preparación de datos, EDA, entrenamiento y validación de Ridge sobre junio, además de un recomendador que carga el modelo guardado. Las métricas locales de Ridge son provisionales hasta integrar las métricas comunes. La comparación entre baseline, Ridge y LightGBM y la evaluación final de septiembre permanecen pendientes de integración.
+El repositorio incluye adquisición, auditoría, preparación de datos, EDA, las métricas comunes, el baseline de cuantiles, Ridge con calibración de residuos, LightGBM cuantílico, el ejecutor que compara los tres sobre las mismas particiones, las sensibilidades acordadas y un recomendador que carga el modelo guardado. Las métricas locales de `src/train_ridge.py` siguen siendo provisionales y están etiquetadas como tales; la comparación común se calcula con `src/metrics.py`. **La evaluación final sobre septiembre no se ha ejecutado**: el snapshot queda reservado hasta congelar la solución.
 
 ## Fuente y snapshots
 
@@ -113,7 +113,9 @@ uv lock --check
 git diff --check
 ```
 
-Las pruebas cubren adquisición y limpieza, separación por anfitrión, preprocesamiento sin fugas, cuantiles de Ridge y validación de entradas. La prueba de integración entrena con datos sintéticos, guarda el modelo y ejecuta el recomendador desde la línea de comandos con el artefacto guardado, sin usar los snapshots reales.
+Las pruebas cubren adquisición y limpieza, separación por anfitrión, preprocesamiento sin fugas, cuantiles de Ridge, métricas comunes contrastadas con valores calculados a mano, baseline con respaldos, LightGBM con categorías desconocidas y cruces, el ejecutor de experimentos, las tablas por segmento, la serialización del modelo ganador y los candados del evaluador final. Las pruebas de integración entrenan con datos sintéticos, guardan el modelo y ejecutan el recomendador desde la línea de comandos con el artefacto guardado, sin usar los snapshots reales.
+
+En macOS, LightGBM necesita el runtime de OpenMP: `brew install libomp`. `uv sync` no lo instala porque es dependencia de sistema, y sin él las pruebas de LightGBM fallan al importar.
 
 ## Flujo colaborativo
 
@@ -127,4 +129,23 @@ Las pruebas cubren adquisición y limpieza, separación por anfitrión, preproce
 
 La base para modelar, las particiones por anfitrión, Ridge con calibración de residuos y el recomendador están implementados. Véanse [contrato común](docs/modeling_contract.md), [comandos reproducibles](docs/reproducibility.md) y [notebook de Ridge](notebooks/03_ridge_recommender.ipynb).
 
-La validación de Ridge utiliza exclusivamente junio. `src/train_ridge.py` calcula métricas locales provisionales; su procedencia y estado quedan registrados como `metrics_implementation` y `metrics_status` en el modelo y el informe. Al integrar `src/metrics.py`, se deberá usar `evaluate_quantile_predictions` y regenerar la comparación común. La búsqueda actual no declara un ganador entre familias ni evalúa septiembre. Sus resultados están en `docs/ridge_validation.json`; la bitácora está en `docs/ai/modeling_log.md`.
+La validación de Ridge utiliza exclusivamente junio. `src/train_ridge.py` calcula métricas locales provisionales; su procedencia y estado quedan registrados como `metrics_implementation` y `metrics_status` en el modelo y el informe. Esa búsqueda específica de Ridge no declara un ganador entre familias ni evalúa septiembre. Sus resultados están en `docs/ridge_validation.json`; la bitácora está en `docs/ai/modeling_log.md`.
+
+La comparación entre familias sí declara un ganador, y se calcula aparte con `src/metrics.py` desde `src/train_models.py`.
+
+## Comparación de modelos, congelamiento y evaluación final
+
+```bash
+uv run python -m src.train_models --mode both              # comparación, búsqueda y sensibilidades
+uv run python -m src.segments                              # tablas por segmento
+uv run python -m src.evaluate_final freeze                 # congelar y serializar el ganador
+uv run python -m src.recommend --model models/final_lightgbm.joblib --listing examples/listing.json
+```
+
+El ejecutor compara baseline, Ridge y LightGBM sobre las mismas cinco particiones agrupadas por anfitrión y guarda `fold_assignment_sha256` en cada registro, para poder verificar que todos midieron sobre las mismas filas. La selección es por pinball loss del cuantil recomendado; MAE y cobertura son secundarias.
+
+Resultados y limitaciones en [resultados de desarrollo](docs/development_results.md); el procedimiento, en [protocolo de experimentos](docs/experiment_protocol.md). Las reglas de cada modelo están en [contrato de métricas](docs/metrics_contract.md), [baseline](docs/baseline_rules.md) y [LightGBM](docs/lightgbm_rules.md).
+
+**Esos números son validación de desarrollo usada para seleccionar configuración, no el test final.** Están optimistamente sesgados a favor del ganador, porque los hiperparámetros se eligieron mirando esas mismas particiones. La estimación independiente es el test temporal, una sola vez, después del congelamiento.
+
+El congelamiento guarda la configuración en `docs/frozen_solution.json`, reentrena al ganador con todo junio y serializa el artefacto en `models/`, ignorado por Git. La evaluación final exige `--confirm-frozen`, la solución congelada y que el SHA-256 de junio coincida; además se niega a repetirse si ya existe un resultado. **Septiembre no ha sido evaluado.**

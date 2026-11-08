@@ -52,8 +52,11 @@ filas concretas. El tratamiento, decidido durante desarrollo y no después de ve
 - `predict()` ordena los cuatro valores de cada fila de menor a mayor y devuelve el resultado monótono.
 
 Reordenar es el tratamiento más conservador disponible: no cambia el conjunto de valores predichos
-para esa fila, solo su asignación a los niveles. Sobre junio la tasa medida antes de corregir es de
-**5.5 %** de las filas de validación.
+para esa fila, solo su asignación a los niveles.
+
+El ejecutor de experimentos reporta las dos cifras por separado, `crossing_rate_before_sorting` y
+`quantile_crossing_rate`. Con la configuración seleccionada, sobre junio, el **4.98 %** de las filas
+de validación cruzaba antes de ordenar y el **0 %** después.
 
 ## Hiperparámetros
 

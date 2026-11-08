@@ -34,7 +34,12 @@ DEFAULT_MARKDOWN_PATH = REPO_ROOT / "docs" / "segment_tables.md"
 
 
 def price_bands(prices: Any, n_bands: int = 4) -> tuple[pd.Series, list[float]]:
-    """Bandas por cuartiles del precio observado. Son descriptivas, no una regla de modelado."""
+    """Bandas por cuartiles del precio real observado.
+
+    Son análisis descriptivo posterior a la predicción. Nunca deben usarse como
+    variable predictora, porque se construyen desde el objetivo, ni como criterio
+    de selección de modelos o hiperparámetros.
+    """
 
     # Conserva el índice: el resultado se asigna de vuelta a un marco que puede estar filtrado.
     values = pd.Series(prices).astype(float)
