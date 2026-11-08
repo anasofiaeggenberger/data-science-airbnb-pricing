@@ -7,6 +7,7 @@ import hashlib
 import json
 import platform
 import sys
+from dataclasses import fields as dataclass_fields, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -35,8 +36,22 @@ DEFAULT_MODEL_DIR = REPO_ROOT / "models"
 UNKNOWN_HOST = "__unknown_host__"
 
 
+class FinalEvaluationNotAuthorized(PermissionError):
+    """Se intentó evaluar el test temporal sin autorización explícita."""
+
+
+
 def file_sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def repo_relative(path: Path) -> str:
+    """Ruta relativa al repositorio cuando se puede, para que sea portable."""
+
+    try:
+        return str(Path(path).resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def load_test_set(
@@ -98,6 +113,61 @@ def freeze_solution(
             json.dumps(frozen, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
     return frozen
+
+
+def _json_safe(value: Any) -> Any:
+    """Convierte a tipos serializables sin perder el valor efectivo."""
+
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    if hasattr(value, "tolist"):
+        return _json_safe(value.tolist())
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def effective_parameters(model: Any) -> dict[str, Any]:
+    """Parámetros realmente usados por el modelo ajustado, no solo los declarados.
+
+    Registrar lo que el usuario escribió no alcanza para reconstruir el
+    entrenamiento: los valores por defecto del código también forman parte de la
+    configuración efectiva.
+    """
+
+    if is_dataclass(model):
+        values = {field.name: getattr(model, field.name) for field in dataclass_fields(model)}
+    elif hasattr(model, "get_params"):
+        values = dict(model.get_params(deep=False))
+    else:
+        values = {}
+
+    # Estado aprendido que hace falta para entender o reproducir el ajuste.
+    if hasattr(model, "models_") and getattr(model, "models_", None):
+        first = next(iter(model.models_.values()))
+        values["lightgbm_effective_params"] = first.get_params(deep=False)
+    if hasattr(model, "categories_") and getattr(model, "categories_", None):
+        values["learned_category_counts"] = {
+            column: len(categories) for column, categories in model.categories_.items()
+        }
+    if hasattr(model, "calibration_method_"):
+        values["calibration_method"] = model.calibration_method_
+    if hasattr(model, "residual_quantiles_"):
+        values["residual_quantiles_log"] = model.residual_quantiles_
+    if hasattr(model, "group_quantiles_"):
+        values["fitted_group_count"] = len(model.group_quantiles_)
+        values["fitted_fallback_count"] = len(model.fallback_quantiles_)
+    if hasattr(model, "n_training_rows_"):
+        values["n_training_rows"] = model.n_training_rows_
+    if hasattr(model, "global_size_"):
+        values["n_training_rows"] = model.global_size_
+
+    values["model_class"] = type(model).__name__
+    return _json_safe(values)
 
 
 def validate_frozen_configuration(frozen: dict[str, Any]) -> None:
@@ -167,7 +237,14 @@ def train_and_serialize_winner(
         "params": frozen["params"],
         "include_optional": frozen["include_optional"],
         "price_cap_quantile": frozen.get("price_cap_quantile"),
-        "feature_policy": {"numeric": list(numeric), "categorical": list(categorical)},
+        # Valores efectivos del modelo ajustado, incluidos los que el usuario no declaró.
+        "effective_parameters": effective_parameters(model),
+        "feature_policy": {
+            "numeric": list(numeric),
+            "categorical": list(categorical),
+            "excluded_from_predictors": ["id", "host_id"],
+            "host_id_use": "solo para agrupar particiones, nunca como predictor",
+        },
         "quantiles": frozen["quantiles"],
         "selection_metric": frozen.get("selection_metric"),
         "development_metrics": frozen.get("development_metrics"),
@@ -191,10 +268,23 @@ def run_final_evaluation(
     frozen: dict[str, Any],
     june_path: Path = DEFAULT_JUNE_PATH,
     september_path: Path = DEFAULT_SEPTEMBER_PATH,
+    confirm_frozen: bool = False,
 ) -> dict[str, Any]:
-    """Entrena la solución congelada con todo junio y la evalúa una vez sobre el test."""
+    """Entrena la solución congelada con todo junio y la evalúa una vez sobre el test.
 
-    X_dev, y_dev, metadata_dev = load_development(june_path)
+    El candado no vive solo en la CLI: esta función se niega a continuar sin
+    `confirm_frozen=True`, y comprueba los requisitos del congelamiento antes de
+    abrir ningún archivo. Una llamada no autorizada no llega a leer septiembre.
+    """
+
+    if confirm_frozen is not True:
+        raise FinalEvaluationNotAuthorized(
+            "La evaluación final exige confirm_frozen=True. El test temporal se evalúa "
+            "una sola vez, después de que el equipo congele y documente la solución."
+        )
+
+    # Todo lo que puede fallar se comprueba antes de tocar disco.
+    validate_frozen_configuration(frozen)
     if frozen.get("june_sha256") and Path(june_path).exists():
         # El desarrollo debe ser byte a byte el mismo con el que se congeló.
         if file_sha256(june_path) != frozen["june_sha256"]:
@@ -202,7 +292,7 @@ def run_final_evaluation(
                 "El snapshot de junio no coincide con el que se usó para congelar la solución."
             )
 
-    validate_frozen_configuration(frozen)
+    X_dev, y_dev, metadata_dev = load_development(june_path)
     model = _fit_frozen_model(frozen, X_dev, y_dev, metadata_dev["host_id"])
 
     X_test, y_test, metadata_test = load_test_set(june_path, september_path)
@@ -276,17 +366,28 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     if args.command == "freeze":
-        frozen = freeze_solution(args.comparison, args.output, args.model)
+        # Se construye primero y se escribe una sola vez, ya con los datos del artefacto.
+        frozen = freeze_solution(args.comparison, None, args.model)
+        artifact = None
+        if not args.skip_artifact:
+            artifact = train_and_serialize_winner(frozen, args.june, args.artifact)
+            frozen["artifact_path"] = repo_relative(artifact["path"])
+            frozen["artifact_sha256"] = file_sha256(artifact["path"])
+
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.output).write_text(
+            json.dumps(frozen, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+
         print(f"Solución congelada: {frozen['model']} {frozen['params']}")
         print(f"Configuración en {args.output}.")
-        if args.skip_artifact:
+        if artifact is None:
             print("Artefacto no generado (--skip-artifact).")
         else:
-            artifact = train_and_serialize_winner(frozen, args.june, args.artifact)
             print(f"Artefacto entrenado con {artifact['metadata']['n_development_rows']} filas "
-                  f"de junio y guardado en {artifact['path']}.")
+                  f"de junio y guardado en {frozen['artifact_path']}.")
             print("Uso: uv run python -m src.recommend --model "
-                  f"{artifact['path']} --listing examples/listing.json")
+                  f"{frozen['artifact_path']} --listing examples/listing.json")
         print("Septiembre sigue sin evaluarse.")
         return 0
 
@@ -314,7 +415,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     frozen = json.loads(Path(args.frozen).read_text(encoding="utf-8"))
-    outcome = run_final_evaluation(frozen, args.june, args.september)
+    outcome = run_final_evaluation(frozen, args.june, args.september, confirm_frozen=True)
 
     Path(args.results).parent.mkdir(parents=True, exist_ok=True)
     Path(args.results).write_text(

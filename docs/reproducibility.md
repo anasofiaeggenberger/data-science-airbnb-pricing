@@ -75,8 +75,19 @@ El recomendador acepta un joblib con el modelo directamente, o un diccionario `{
 uv run python -m src.train_models --mode both              # comparación, búsqueda y sensibilidades
 uv run python -m src.segments                              # tablas por segmento
 uv run python -m src.evaluate_final freeze                 # congelar y serializar el ganador
-uv run python -m src.recommend --model models/final_lightgbm.joblib --listing examples/listing.json
 ```
+
+El congelamiento registra en `docs/frozen_solution.json` la ruta del artefacto que acaba de generar,
+junto con su SHA-256. La recomendación la lee de ahí en vez de escribirla a mano, así que el comando
+funciona igual si el ganador resulta ser Ridge, LightGBM o el baseline:
+
+```bash
+MODELO=$(uv run python -c "import json; print(json.load(open('docs/frozen_solution.json'))['artifact_path'])")
+uv run python -m src.recommend --model "$MODELO" --listing examples/listing.json
+```
+
+El nombre del archivo lleva la familia ganadora, pero no hay que adivinarlo: `artifact_path` es la
+ruta real del artefacto serializado, y la metadata que viaja dentro dice qué modelo es.
 
 En macOS, LightGBM necesita el runtime de OpenMP: `brew install libomp`. `uv sync` no lo instala porque es dependencia de sistema, y sin él falla el import de `lightgbm`.
 
@@ -91,6 +102,10 @@ uv run python -m src.evaluate_final run --confirm-frozen
 ```
 
 Se niega a ejecutarse sin `--confirm-frozen`, sin `docs/frozen_solution.json`, si el SHA-256 de junio no coincide con el registrado al congelar, si el contrato de cuantiles cambió, o si ya existe `docs/final_evaluation.json`. Ese último candado existe porque el test temporal es de un solo uso: repetirlo deja de ser una estimación independiente.
+
+El candado no está solo en la CLI. `run_final_evaluation()` exige `confirm_frozen=True` en la propia llamada de Python y comprueba los requisitos del congelamiento antes de abrir ningún archivo, de modo que un script que la invoque sin autorización no alcanza a leer septiembre. Las pruebas lo verifican espiando que no se llame ni a `load_development` ni a `load_test_set`.
+
+El artefacto serializado guarda los parámetros efectivos del modelo ajustado, no solo los que se escribieron al llamarlo: semilla, particiones internas de calibración, umbral de categorías raras, `n_jobs`, los hiperparámetros reales del estimador y las columnas predictoras, con `id` y `host_id` marcados como excluidos. Una prueba comprueba que esa metadata corresponde al modelo que viaja en el mismo archivo.
 
 **Septiembre no ha sido evaluado.** Las pruebas del evaluador usan snapshots sintéticos generados en directorios temporales.
 

@@ -139,8 +139,19 @@ La comparación entre familias sí declara un ganador, y se calcula aparte con `
 uv run python -m src.train_models --mode both              # comparación, búsqueda y sensibilidades
 uv run python -m src.segments                              # tablas por segmento
 uv run python -m src.evaluate_final freeze                 # congelar y serializar el ganador
-uv run python -m src.recommend --model models/final_lightgbm.joblib --listing examples/listing.json
 ```
+
+El congelamiento registra en `docs/frozen_solution.json` la ruta del artefacto que acaba de generar,
+junto con su SHA-256. La recomendación la lee de ahí en vez de escribirla a mano, así que el comando
+funciona igual si el ganador resulta ser Ridge, LightGBM o el baseline:
+
+```bash
+MODELO=$(uv run python -c "import json; print(json.load(open('docs/frozen_solution.json'))['artifact_path'])")
+uv run python -m src.recommend --model "$MODELO" --listing examples/listing.json
+```
+
+El nombre del archivo lleva la familia ganadora, pero no hay que adivinarlo: `artifact_path` es la
+ruta real del artefacto serializado, y la metadata que viaja dentro dice qué modelo es.
 
 El ejecutor compara baseline, Ridge y LightGBM sobre las mismas cinco particiones agrupadas por anfitrión y guarda `fold_assignment_sha256` en cada registro, para poder verificar que todos midieron sobre las mismas filas. La selección es por pinball loss del cuantil recomendado; MAE y cobertura son secundarias.
 

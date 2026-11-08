@@ -79,11 +79,22 @@ El orden no es negociable:
 3. Sofi revisa que la selección esté documentada antes del test.
 4. Recién entonces se ejecuta `evaluate_final.py run --confirm-frozen`.
 
-El evaluador tiene tres candados:
+El evaluador tiene varios candados, y ninguno vive solo en la línea de comandos:
 
-- Sin `--confirm-frozen` no toca septiembre y termina con código 1.
+- `run_final_evaluation()` exige `confirm_frozen=True` en la propia llamada de Python, y es estricto:
+  un valor meramente parecido a verdadero no sirve. Una llamada no autorizada corta antes de abrir
+  ningún archivo, así que no puede leer septiembre por accidente.
+- Los requisitos del congelamiento se comprueban antes de tocar disco: configuración construible por
+  el código actual, no evaluada antes, y contrato de cuantiles igual al de `src/metrics.py`.
+- Sin `--confirm-frozen` la CLI no toca septiembre y termina con código 1.
 - Sin `docs/frozen_solution.json` no corre.
 - Si el SHA-256 de junio no coincide con el congelado, falla en vez de evaluar sobre otro desarrollo.
+- Si ya existe `docs/final_evaluation.json`, se niega a repetirse salvo `--allow-rerun` explícito.
+
+El artefacto del ganador guarda además sus **parámetros efectivos**, no solo los declarados: semilla,
+particiones de calibración, umbral de categorías, `n_jobs`, los hiperparámetros reales del estimador
+y las columnas predictoras. Sin eso, reconstruir el entrenamiento dependería de que los valores por
+defecto del código nunca cambien.
 
 El test se reconstruye con la regla original, la misma del manifiesto: IDs presentes en septiembre,
 ausentes en junio y con precio válido. Se verificó con snapshots sintéticos antes de usar los reales.
