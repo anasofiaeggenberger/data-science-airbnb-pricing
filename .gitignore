@@ -218,6 +218,14 @@ models/*
 !models/.gitkeep
 reports/figures/*
 !reports/figures/.gitkeep
+!reports/figures/missingness_june.png
+!reports/figures/price_by_capacity_bedrooms_june.png
+!reports/figures/price_by_neighbourhood_june.png
+!reports/figures/price_by_room_type_june.png
+!reports/figures/price_log_distribution_june.png
+!reports/figures/model_comparison_pinball_june.png
+!reports/figures/model_comparison_mae_june.png
+!reports/figures/model_comparison_coverage_june.png
 reports/*.json
 *.pkl
 *.pickle

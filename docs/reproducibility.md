@@ -114,7 +114,7 @@ Artefactos de esta parte: `docs/model_comparison.json`, `docs/sensitivity_result
 
 ## Resultados temporales finales
 
-La evaluación se hizo sobre 2,604 anuncios con IDs ausentes en junio y precio válido:
+La evaluación se hizo sobre 2,604 anuncios con `id` ausente en junio y precio válido. Esta definición identifica anuncios nuevos respecto del snapshot, no anfitriones completamente nuevos: 1,493 anuncios pertenecían a anfitriones que ya tenían al menos un anuncio en junio. No se debe interpretar que esos anuncios fueron necesariamente publicados por primera vez en septiembre.
 
 | Métrica | Resultado |
 |---|---:|
