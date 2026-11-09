@@ -6,6 +6,51 @@ Pregunta: ¿qué precio por noche puede usar como referencia un anfitrión nuevo
 
 El repositorio incluye adquisición, auditoría, preparación de datos, EDA, las métricas comunes, el baseline de cuantiles, Ridge con calibración de residuos, LightGBM cuantílico, el ejecutor que compara los tres sobre las mismas particiones, las sensibilidades acordadas y un recomendador que carga el modelo guardado. Las métricas locales de `src/train_ridge.py` siguen siendo provisionales y están etiquetadas como tales; la comparación común se calcula con `src/metrics.py`. La validación de junio seleccionó LightGBM y la evaluación temporal de septiembre se ejecutó una sola vez después del congelamiento; sus resultados oficiales están en `docs/final_evaluation.json` y no deben recalcularse.
 
+## Inicio rápido desde un clon limpio
+
+Este flujo instala el entorno, descarga o verifica únicamente junio, ejecuta las pruebas y genera una recomendación sin necesitar el binario original del modelo. Requiere Python 3.12 y [`uv`](https://docs.astral.sh/uv/):
+
+```bash
+git clone https://github.com/anasofiaeggenberger/data-science-airbnb-pricing.git
+cd data-science-airbnb-pricing
+python3.12 --version
+uv --version
+```
+
+En macOS, instalar una vez el runtime de OpenMP que necesita LightGBM:
+
+```bash
+brew install libomp
+```
+
+Instalar exactamente las dependencias bloqueadas, preparar junio y ejecutar las pruebas:
+
+```bash
+uv sync --frozen
+uv run python -m src.fetch_development
+uv run pytest -q
+```
+
+Si `models/final_lightgbm.joblib` no está disponible, se puede reconstruir una copia en un directorio temporal. El comando lee la comparación oficial de junio, entrena solo con el snapshot de junio, escribe el JSON y el modelo fuera del repositorio, y luego ejecuta el recomendador:
+
+```bash
+repro_dir=$(mktemp -d)
+uv run python -m src.evaluate_final freeze \
+  --comparison docs/model_comparison.json \
+  --output "$repro_dir/frozen_solution.json" \
+  --june data/raw/mexico_city_2026-06-15_listings.csv.gz \
+  --artifact "$repro_dir/final_lightgbm.joblib"
+uv run python -m src.recommend \
+  --model "$repro_dir/final_lightgbm.joblib" \
+  --listing examples/listing.json
+```
+
+La copia regenerada puede tener un SHA-256 distinto por diferencias de entorno o serialización. Este flujo no ejecuta `src.evaluate_final run`, no usa `--allow-rerun` y no vuelve a leer ni evaluar septiembre. El archivo `frozen_solution.json` temporal tampoco reemplaza el JSON oficial.
+
+### GitHub, ZIP y archivos locales
+
+GitHub conserva el código, las pruebas, notebooks, documentación, `pyproject.toml`, `uv.lock`, manifiestos y las figuras finales que estén versionadas. Los snapshots de datos, CSV derivados, modelos `.joblib` y otros artefactos generados están excluidos por `.gitignore`. La opción **Code → Download ZIP** contiene los archivos versionados, pero no incorpora esos archivos locales ignorados; por eso un ZIP limpio necesita ejecutar `fetch_development` y, si falta el modelo, el procedimiento temporal anterior.
+
 ## Fuente y snapshots
 
 La fuente obligatoria es [Inside Airbnb — Get the Data](https://insideairbnb.com/get-the-data/). Se usará el archivo detallado `listings.csv.gz`, no el resumen `listings.csv`. La adquisición descubre los enlaces de Mexico City desde la página oficial y selecciona los dos snapshots cronológicos más recientes; si la página expone menos enlaces, reutiliza únicamente URLs ya registradas en el manifiesto. No construye URLs de archivo por suposición.
@@ -124,7 +169,7 @@ En macOS, LightGBM necesita el runtime de OpenMP: `brew install libomp`. `uv syn
 2. Trabajar en cambios pequeños, ejecutar las pruebas y validaciones (`pytest`, `uv lock --check`, `git diff --check`) y documentar comandos/resultados.
 3. Abrir un pull request hacia `main` con descripción, evidencia de auditoría, figuras y limitaciones.
 4. Revisar al menos por otra persona del equipo; resolver comentarios antes de integrar.
-5. No subir datos crudos, modelos ni figuras generadas: el código, la documentación y `uv.lock` sí se conservan en Git.
+5. No subir datos crudos, modelos ni archivos temporales o figuras de prueba: las figuras finales seleccionadas y revisadas pueden conservarse explícitamente en `reports/figures/`; el código, la documentación y `uv.lock` sí se conservan en Git.
 
 ## Ridge y recomendador
 

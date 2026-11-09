@@ -14,6 +14,38 @@ uv run python -m src.train_models --mode both \
 
 La descarga comprueba el SHA-256 ya registrado y, por defecto, solo verifica o descarga junio. El ejecutor compara baseline, Ridge y LightGBM con las mismas particiones y métricas. No es necesario volver a descargar septiembre ni ejecutar la evaluación temporal para reproducir el desarrollo.
 
+En macOS, instalar una vez el runtime de OpenMP requerido por LightGBM:
+
+```bash
+brew install libomp
+```
+
+Las pruebas se ejecutan sin usar los snapshots reales de septiembre:
+
+```bash
+uv run pytest -q
+```
+
+## Reconstrucción segura del artefacto y recomendación
+
+El modelo binario original no está incluido en Git. Para generar una copia desde un clon limpio, usar el resultado oficial de comparación y escribir tanto la configuración como el artefacto en un directorio temporal:
+
+```bash
+repro_dir=$(mktemp -d)
+uv run python -m src.evaluate_final freeze \
+  --comparison docs/model_comparison.json \
+  --output "$repro_dir/frozen_solution.json" \
+  --june data/raw/mexico_city_2026-06-15_listings.csv.gz \
+  --artifact "$repro_dir/final_lightgbm.joblib"
+uv run python -m src.recommend \
+  --model "$repro_dir/final_lightgbm.joblib" \
+  --listing examples/listing.json
+```
+
+`freeze` lee la selección registrada en `docs/model_comparison.json`, reentrena solo con junio y no abre septiembre. Las rutas `--output` y `--artifact` evitan sobrescribir `docs/frozen_solution.json` o `models/final_lightgbm.joblib`. El artefacto regenerado puede tener un SHA-256 diferente por diferencias de entorno o serialización, aunque siga el mismo contrato y configuración. Para reproducir el entrenamiento no se debe ejecutar `src.evaluate_final run`, usar `--allow-rerun` ni volver a evaluar septiembre.
+
+Un clon o ZIP de GitHub contiene únicamente archivos versionados. Los snapshots, CSV derivados y modelos `.joblib` están ignorados por Git; después de descargar el código es necesario ejecutar `uv sync --frozen` y `uv run python -m src.fetch_development`. El procedimiento anterior genera el modelo localmente cuando el binario original no está disponible.
+
 Las métricas de `src/train_ridge.py` son provisionales: usa funciones de scikit-learn para pinball/MAE y cálculos locales de cobertura/amplitud. El informe y los metadatos del modelo guardan `metrics_status=provisional_pending_shared_metrics` y la implementación utilizada.
 
 `src/metrics.py` ya está integrado en esta rama, y la comparación entre familias se calcula con él desde `src/train_models.py`. Esa es la comparación que declara un ganador. Las cifras provisionales de `train_ridge.py` quedan como evidencia del trabajo específico de Ridge y no se usan para comparar familias. Una prueba contrasta el pinball de `src/metrics.py` contra `sklearn.metrics.mean_pinball_loss`, así que las dos implementaciones coinciden.
@@ -37,9 +69,11 @@ uv run python -m ipykernel install --prefix .venv --name airbnb --display-name '
 uv run jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.kernel_name=airbnb --ExecutePreprocessor.timeout=180 notebooks/03_ridge_recommender.ipynb
 ```
 
-Ejecutar `src.train_ridge` antes del notebook. El notebook lee resultados guardados y demuestra inferencia; no repite la búsqueda completa y nunca abre septiembre.
+El notebook de Ridge requiere `models/ridge.joblib`, que no está versionado. `src.train_ridge` no permite cambiar sus rutas de salida y sobrescribe `docs/ridge_validation.json`; por eso no debe ejecutarse directamente en el checkout de entrega. Si se necesita reproducir esa demostración, hacerlo en una copia o clon temporal con `uv sync --frozen`, `uv run python -m src.fetch_development` y `uv run python -m src.train_ridge`. El notebook lee resultados guardados y demuestra inferencia; no repite la búsqueda completa y nunca abre septiembre.
 
 ## Paquete de entrega
+
+Este bloque es únicamente histórico. No debe ejecutarse para reproducir el modelo, porque `--include-test` accede al snapshot de septiembre y el test temporal ya fue evaluado una sola vez.
 
 ```bash
 # Solo para reconstruir el paquete histórico de entrega; no es parte de la reproducción ordinaria.
