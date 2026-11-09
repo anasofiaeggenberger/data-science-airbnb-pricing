@@ -2,8 +2,15 @@
 
 Proyecto: `data-science-airbnb-pricing` — Fase 3.
 
-Todo lo que sigue sale **únicamente de junio**. El snapshot de septiembre no se abrió, no se midió y no
-participó en ninguna decisión. Procedimiento en [`docs/experiment_protocol.md`](experiment_protocol.md).
+> **Nota de estado.** Este documento conserva la bitácora de resultados de desarrollo y algunas frases
+> describen el estado anterior al cierre experimental. Posteriormente, la solución se congeló y la
+> evaluación temporal se ejecutó una sola vez. El estado final y sus resultados oficiales están en
+> [`docs/frozen_solution.json`](frozen_solution.json) y [`docs/final_evaluation.json`](final_evaluation.json).
+> La nota histórica no debe leerse como una instrucción para repetir septiembre.
+
+La sección de desarrollo que sigue sale **únicamente de junio**. En el corte histórico que documenta,
+el snapshot de septiembre no se abrió, no se midió y no participó en ninguna decisión. Procedimiento en
+[`docs/experiment_protocol.md`](experiment_protocol.md).
 
 Registros completos: [`docs/model_comparison.json`](model_comparison.json) y
 [`docs/sensitivity_results.json`](sensitivity_results.json).
@@ -141,10 +148,12 @@ cuantiles, métricas de desarrollo, huella de particiones, SHA-256 de junio y `t
 Ese paso es anterior e independiente de la evaluación de septiembre: produce el modelo que se va a
 evaluar, no la evaluación. El artefacto queda fuera de Git y se reconstruye con el comando.
 
-**Al momento de escribir esto la solución no ha sido congelada**, porque congelar es una decisión del
-equipo y Sofi debe revisar antes que la selección esté documentada. El flujo sí se verificó de punta
-a punta sobre junio real, escribiendo en rutas temporales: entrenó con 29,637 filas, serializó, y el
+**En el corte documentado aquí la solución todavía no había sido congelada**, porque esa era una
+decisión del equipo y se esperaba la revisión de la selección. El flujo se verificó de punta a punta
+sobre junio real, escribiendo en rutas temporales: entrenó con 29,637 filas, serializó, y el
 recomendador cargó el artefacto y devolvió los cuatro cuantiles en MXN, positivos y ordenados.
+Después de ese corte se congeló LightGBM con la configuración de [`docs/frozen_solution.json`](frozen_solution.json)
+y se conservó el resultado temporal único en [`docs/final_evaluation.json`](final_evaluation.json).
 
 ## Qué es y qué no es esto
 
@@ -152,5 +161,6 @@ Esta es **validación usada para seleccionar configuración**, no una estimació
 desempeño futuro. Los hiperparámetros se eligieron mirando estas mismas particiones, así que estos
 números están optimistamente sesgados a favor del ganador.
 
-La estimación independiente es el test temporal, una sola vez, después de congelar. Al momento de
-escribir esto, **septiembre no ha sido evaluado**.
+La estimación independiente era el test temporal, una sola vez, después de congelar. En el corte de
+este documento **septiembre todavía no había sido evaluado**; posteriormente se ejecutó una sola vez.
+Sus métricas no se usan para reajustar ni para reescribir estos resultados de desarrollo.

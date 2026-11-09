@@ -136,7 +136,7 @@ El contrato común también revisa el orden de los cuantiles y registra los cruc
 
 ### Evaluación temporal final
 
-La evaluación se ejecutó una sola vez sobre 2,604 anuncios con IDs ausentes en junio y precios válidos. Sus resultados oficiales son:
+La evaluación se ejecutó una sola vez sobre 2,604 anuncios con `id` ausente en junio y precio válido. Esta regla identifica anuncios nuevos respecto del snapshot, no anfitriones completamente nuevos: 1,493 anuncios correspondieron a anfitriones que ya tenían al menos un anuncio en junio. No se afirma que esos anuncios fueran necesariamente publicados por primera vez en septiembre. Sus resultados oficiales son:
 
 | Métrica | Resultado |
 |---|---:|

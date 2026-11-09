@@ -2,7 +2,7 @@
 
 Proyecto final de Ciencia de Datos — segundo semestre 2026, UFM.
 
-Pregunta: ¿qué precio por noche debe cobrar un anfitrión nuevo de Airbnb en Ciudad de México? El objetivo es recomendar un precio en MXN y un rango razonable usando anuncios reales de Inside Airbnb. La propuesta contempla un baseline de mediana por alcaldía y tipo de alojamiento, regresión lineal regularizada sobre `log(precio)` y LightGBM con pérdida por cuantiles. La métrica principal será pinball loss, además de MAE y cobertura del intervalo.
+Pregunta: ¿qué precio por noche puede usar como referencia un anfitrión nuevo de Airbnb en Ciudad de México? El objetivo es recomendar un precio en MXN y un rango razonable usando anuncios reales de Inside Airbnb. La propuesta contempla un baseline de mediana por alcaldía y tipo de alojamiento, regresión lineal regularizada sobre `log(precio)` y LightGBM con pérdida por cuantiles. La métrica principal es pinball loss, además de MAE y cobertura del intervalo.
 
 El repositorio incluye adquisición, auditoría, preparación de datos, EDA, las métricas comunes, el baseline de cuantiles, Ridge con calibración de residuos, LightGBM cuantílico, el ejecutor que compara los tres sobre las mismas particiones, las sensibilidades acordadas y un recomendador que carga el modelo guardado. Las métricas locales de `src/train_ridge.py` siguen siendo provisionales y están etiquetadas como tales; la comparación común se calcula con `src/metrics.py`. La validación de junio seleccionó LightGBM y la evaluación temporal de septiembre se ejecutó una sola vez después del congelamiento; sus resultados oficiales están en `docs/final_evaluation.json` y no deben recalcularse.
 
@@ -82,6 +82,8 @@ La notebook documenta el problema, los costos de sobrevalorar y subvalorar, la m
 
 La política de variables está en [`docs/feature_policy.md`](docs/feature_policy.md). Reseñas, ratings, disponibilidad observada, ingresos estimados, derivados del precio, identificadores y otras métricas posteriores a publicar quedan fuera. “Nuevo en el snapshot” no necesariamente significa “anuncio recién publicado”.
 
+El caso de uso está pensado para un anfitrión nuevo que necesita fijar el precio inicial de un anuncio. Esa intención no debe confundirse con la población del test temporal: el test se definió por anuncios cuyos `id` estaban ausentes en junio, no por anfitriones sin historial. De los 2,604 anuncios evaluados, 1,493 pertenecían a anfitriones que ya tenían al menos un anuncio en junio. Por eso no se afirma que fueran anuncios publicados por primera vez en septiembre ni que representen exclusivamente anfitriones completamente nuevos.
+
 Para reconstruir el desarrollo desde un clon limpio, verificar junio y guardar los resultados regenerables fuera del repositorio:
 
 ```bash
@@ -102,7 +104,7 @@ Antes de cualquier validación cruzada o partición interna de junio, se debe se
 
 ## Reglas de disponibilidad y fuga
 
-El caso de uso es un anfitrión nuevo. No deben usarse como predictores al publicar: reseñas, calificaciones, número de reseñas, superhost, tasas de respuesta/aceptación/cancelación ni cualquier métrica que solo exista después de recibir reservas o huéspedes. También se revisarán como posibles fugas `availability_30/60/90/365`, `availability_eoy`, `calendar_updated`, `calendar_last_scraped`, `estimated_occupancy_l365d`, `estimated_revenue_l365d`, `price_quote_*`, variables de reviews, `calculated_host_listings_count*` y metadatos del scrape (`scrape_id`, `last_scraped`, `source`).
+El caso de uso es un anfitrión nuevo. No deben usarse como predictores al publicar: reseñas, calificaciones, número de reseñas, superhost, tasas de respuesta/aceptación/cancelación ni cualquier métrica que solo exista después de recibir reservas o huéspedes. También se revisarán como posibles fugas `availability_30/60/90/365`, `availability_eoy`, `calendar_updated`, `calendar_last_scraped`, `estimated_occupancy_l365d`, `estimated_revenue_l365d`, `price_quote_*`, variables de reviews, `calculated_host_listings_count*` y metadatos del scrape (`scrape_id`, `last_scraped`, `source`). La evaluación temporal no prueba el desempeño exclusivo para anfitriones completamente nuevos, porque su regla identifica anuncios ausentes en junio y no filtra por historial de `host_id`.
 
 ## Pruebas
 
@@ -163,7 +165,7 @@ El congelamiento guardó la configuración en `docs/frozen_solution.json`, reent
 
 La selección se hizo exclusivamente con las cinco particiones de desarrollo de junio, antes de mirar septiembre. El modelo seleccionado fue LightGBM con `n_estimators=400`, `learning_rate=0.05`, `num_leaves=31` y `min_child_samples=50`.
 
-La evaluación temporal utilizó 2,604 anuncios con IDs ausentes en junio y precio válido:
+La evaluación temporal utilizó 2,604 anuncios con `id` ausente en junio y precio válido. Esta es una población de anuncios nuevos respecto del snapshot, no una población de anfitriones nuevos: 1,493 anuncios correspondieron a anfitriones que ya tenían al menos un anuncio en junio.
 
 | Métrica | Resultado |
 |---|---:|

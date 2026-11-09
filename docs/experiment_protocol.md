@@ -2,6 +2,12 @@
 
 Proyecto: `data-science-airbnb-pricing` — Fase 3.
 
+> **Estado del cierre.** Este protocolo conserva el procedimiento que se acordó antes de mirar el test
+> temporal. El procedimiento se aplicó: la selección se hizo con junio, se congeló LightGBM y el test
+> de septiembre se ejecutó una sola vez. El resultado actual está en [`docs/final_evaluation.json`](final_evaluation.json)
+> y la configuración en [`docs/frozen_solution.json`](frozen_solution.json). Los comandos de evaluación
+> que aparecen abajo son históricos y no forman parte de la reproducción ordinaria.
+
 Implementación: [`src/train_models.py`](../src/train_models.py), [`src/segments.py`](../src/segments.py)
 y [`src/evaluate_final.py`](../src/evaluate_final.py).
 Contrato de cuantiles: [`docs/metrics_contract.md`](metrics_contract.md).
@@ -97,10 +103,13 @@ y las columnas predictoras. Sin eso, reconstruir el entrenamiento dependería de
 defecto del código nunca cambien.
 
 El test se reconstruye con la regla original, la misma del manifiesto: IDs presentes en septiembre,
-ausentes en junio y con precio válido. Se verificó con snapshots sintéticos antes de usar los reales.
+ausentes en junio y con precio válido. La regla identifica anuncios nuevos respecto del snapshot, no
+anfitriones completamente nuevos. En la evaluación oficial, 1,493 de los 2,604 anuncios pertenecían
+a anfitriones que ya tenían al menos un anuncio en junio; por eso no se afirma que fueran publicaciones
+por primera vez en septiembre. Se verificó con snapshots sintéticos antes de usar los reales.
 
-Después de ver septiembre no se reajusta nada. Pan es el único que ejecuta esa evaluación; los demás
-consumen `docs/final_evaluation.json`.
+Después de ver septiembre no se reajusta nada. Pan fue quien ejecutó esa evaluación; los demás
+consumen `docs/final_evaluation.json`. No se debe volver a ejecutar `run` ni usar `--allow-rerun`.
 
 ## Comandos
 

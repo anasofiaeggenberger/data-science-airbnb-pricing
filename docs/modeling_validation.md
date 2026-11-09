@@ -2,6 +2,12 @@
 
 Fecha: 8 de noviembre de 2026.
 
+> **Nota de trazabilidad.** Las verificaciones de este documento fueron registradas en cortes de
+> desarrollo anteriores al cierre experimental. Conservan evidencia histórica y no deben confundirse
+> con el estado final: la solución quedó congelada después y la evaluación temporal se ejecutó una sola
+> vez. Los archivos de referencia actuales son [`docs/frozen_solution.json`](frozen_solution.json) y
+> [`docs/final_evaluation.json`](final_evaluation.json).
+
 - Entorno instalado desde uv.lock con Python 3.12; uv lock --check --offline correcto.
 - 18 pruebas pasan, incluyendo las 8 pruebas originales de preparación y 10 de carga, preprocesamiento, Ridge, búsqueda e inferencia. La integración entrena con datos sintéticos, carga el artefacto guardado y ejecuta el recomendador por CLI en un proceso separado; cubre el modelo directo y el diccionario con metadatos.
 - Notebook 03_ridge_recommender: 5 celdas de código ejecutadas, sin errores guardados.
@@ -27,7 +33,11 @@ Fecha: 8 de noviembre de 2026. Rama `feat/lightgbm-experiments`, después de fus
 - Selección por pinball p35; MAE y cobertura se reportan como secundarias. Hiperparámetros elegidos solo con junio: 4 alphas de Ridge y 12 configuraciones de LightGBM.
 - Cruces de cuantiles de LightGBM reportados por separado: 4.98 % antes de ordenar, 0 % después.
 - Serialización del ganador verificada sobre junio real en rutas temporales: entrenó con 29,637 filas, guardó el artefacto joblib con su metadata, y `src/recommend.py` lo cargó y devolvió los cuatro cuantiles en MXN, positivos y ordenados. También se probó con Ridge y LightGBM sobre datos sintéticos.
-- El evaluador final se probó únicamente con snapshots sintéticos en directorios temporales. **No se ejecutó la evaluación real.** No existen docs/frozen_solution.json ni docs/final_evaluation.json, y `data/raw/` contiene solo el snapshot de junio: septiembre no está descargado.
-- La solución todavía no está congelada: esa decisión es del equipo y requiere la revisión previa de la selección documentada.
+- En ese corte, el evaluador final se probó únicamente con snapshots sintéticos en directorios temporales.
+  **La evaluación real todavía no se había ejecutado**, no existían los JSON oficiales de cierre y el
+  snapshot de septiembre aún no formaba parte de esa verificación.
+- En ese corte la solución todavía no estaba congelada; después se congeló LightGBM y se ejecutó una
+  sola evaluación temporal. El detalle actual está en los dos JSON oficiales indicados arriba.
 
-El test temporal de septiembre permanece sin evaluar.
+El test temporal de septiembre permanecía sin evaluar en el corte histórico de este documento. No se
+debe repetir ahora: la evaluación oficial ya está registrada en `docs/final_evaluation.json`.
